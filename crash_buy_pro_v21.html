@@ -1,0 +1,1408 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f0f3f8;--surface:#fff;--surface2:#f4f6fb;--surface3:#e8ecf4;
+    --border:rgba(0,0,0,0.07);--border2:rgba(0,0,0,0.13);
+    --text:#0f1117;--muted:#7a849a;--muted2:#a0aab8;
+    --accent:#0052ff;--accent-dim:rgba(0,82,255,0.08);
+    --green:#00a86b;--green-dim:rgba(0,168,107,0.09);
+    --red:#e03131;--red-dim:rgba(224,49,49,0.08);
+    --amber:#d97706;--amber-dim:rgba(217,119,6,0.09);
+    --purple:#7c3aed;--purple-dim:rgba(124,58,237,0.08);
+    --fm:'Space Mono',monospace;--fd:'Syne',sans-serif;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--fd);padding:0;font-size:16px;overflow-x:hidden}
+  .app{padding:18px;max-width:720px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1.5px solid var(--border)}
+  .logo{font-size:21px;font-weight:800;letter-spacing:-0.5px}.logo span{color:var(--accent)}
+  .header-right{display:flex;align-items:center;gap:8px}
+  .status-pill{display:flex;align-items:center;gap:6px;font-size:12px;font-family:var(--fm);color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 12px;border-radius:20px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+  .dot.offline{background:var(--red);animation:none}.dot.loading{background:var(--amber)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  .refresh-btn{font-family:var(--fm);font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all 0.15s}
+  .refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .live-banner{display:flex;align-items:center;gap:10px;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-family:var(--fm);font-size:12px;font-weight:700}
+  .live-banner.ok{background:var(--green-dim);border:1px solid rgba(0,168,107,0.2);color:var(--green)}
+  .live-banner.warn{background:var(--amber-dim);border:1px solid rgba(217,119,6,0.2);color:var(--amber)}
+  .live-banner.error{background:var(--red-dim);border:1px solid rgba(224,49,49,0.2);color:var(--red)}
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:4px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .tabs{display:flex;gap:3px;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;flex-wrap:wrap}
+  .tab{flex:1;min-width:60px;font-family:var(--fm);font-size:11px;font-weight:700;padding:7px 4px;border-radius:7px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:0.3px;background:transparent;color:var(--muted);transition:all 0.15s;text-align:center}
+  .tab.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(0,82,255,0.18)}
+  .panel{display:none}.panel.active{display:block}
+  .section-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,0.04)}
+  .section-title{font-size:12px;font-family:var(--fm);color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;font-weight:700}
+  .row-between{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .chart-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+  .price-big{font-size:26px;font-weight:800;font-family:var(--fm);letter-spacing:-1px}
+  .price-change{font-size:13px;font-family:var(--fm);padding:3px 9px;border-radius:5px;margin-top:4px;display:inline-block;font-weight:700}
+  .change-neg{background:var(--red-dim);color:var(--red)}.change-pos{background:var(--green-dim);color:var(--green)}
+  .chart-label{font-size:11px;color:var(--muted);font-family:var(--fm);text-transform:uppercase;letter-spacing:0.5px}
+  .chart-val{font-size:14px;font-weight:700;font-family:var(--fm)}
+  canvas#priceChart{width:100%!important;height:260px!important}
+  .chart-fullbleed{width:calc(100% + 36px);margin-left:-18px;margin-right:-18px;padding:0 6px;box-sizing:border-box}
+  .chart-ticker-label{font-family:var(--fm);font-weight:800;font-size:13px;color:var(--text);margin-bottom:6px}
+  .chart-loading{font-family:var(--fm);font-size:12px;color:var(--muted);padding:50px 0;text-align:center}
+  .range-tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+  .range-tab{font-family:var(--fm);font-size:11px;font-weight:700;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all 0.15s}
+  .range-tab:hover{border-color:var(--accent);color:var(--accent)}
+  .range-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .chart-legend{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
+  .chart-legend-item{display:flex;align-items:center;gap:5px;font-size:12px;font-family:var(--fm);color:var(--muted)}
+  .chart-legend-swatch{width:10px;height:3px;border-radius:2px}
+  .source-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-family:var(--fm);padding:3px 8px;border-radius:4px;font-weight:700}
+  .source-live{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,168,107,0.2)}
+  .source-sim{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(217,119,6,0.2)}
+  .last-updated{font-size:10px;font-family:var(--fm);color:var(--muted2);margin-top:4px}
+  .metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:11px 10px;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+  .metric-label{font-size:11px;font-family:var(--fm);color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:5px}
+  .metric-value{font-size:16px;font-weight:700;font-family:var(--fm)}
+  .metric-value.green{color:var(--green)}.metric-value.red{color:var(--red)}.metric-value.amber{color:var(--amber)}.metric-value.blue{color:var(--accent)}
+  .threshold-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .threshold-btn{font-family:var(--fm);font-size:12px;font-weight:700;padding:8px 4px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all 0.15s;text-align:center}
+  .threshold-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .threshold-btn.selected{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+  .threshold-btn.triggered{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+  .threshold-btn.past{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+  .signal-bars{display:flex;flex-direction:column;gap:9px}
+  .news-item{display:block;padding:9px 0;border-bottom:1px solid var(--border);text-decoration:none;color:inherit}
+  .news-item:last-child{border-bottom:none}
+  .news-headline{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--text);line-height:1.35;margin-bottom:4px}
+  .news-headline:hover{color:var(--accent)}
+  .news-meta{font-family:var(--fm);font-size:10px;color:var(--muted);display:flex;gap:8px;align-items:center}
+  .news-source{font-weight:700;text-transform:uppercase;letter-spacing:0.3px}
+  .signal-row{display:flex;align-items:center;gap:10px}
+  .signal-name{font-size:13px;font-family:var(--fm);color:var(--muted);width:80px;flex-shrink:0}
+  .signal-bar-track{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;border:1px solid var(--border)}
+  .signal-bar-fill{height:100%;border-radius:3px;transition:width 0.6s ease}
+  .signal-score{font-size:13px;font-family:var(--fm);width:36px;text-align:right;font-weight:700}
+  .param-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+  .param-label{font-size:13px;font-family:var(--fm);color:var(--muted);flex:1}
+  .param-val{font-size:14px;font-family:var(--fm);color:var(--text);min-width:56px;text-align:right;font-weight:700}
+  input[type=range]{flex:2;accent-color:var(--accent)}
+  .tranche-list{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+  .tranche{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:9px;padding:9px 13px;border:1px solid var(--border)}
+  .tranche-num{font-size:11px;font-family:var(--fm);color:var(--muted);width:20px;font-weight:700}
+  .tranche-trigger{font-size:13px;font-family:var(--fm);color:var(--text);flex:1}
+  .tranche-alloc{font-size:13px;font-family:var(--fm);color:var(--accent);font-weight:700}
+  .tranche-status{font-size:11px;font-family:var(--fm);padding:3px 8px;border-radius:4px;font-weight:700}
+  .status-ready{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,168,107,0.2)}
+  .status-wait{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+  .status-done{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,82,255,0.15)}
+  .action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{font-family:var(--fm);font-size:13px;font-weight:700;padding:11px;border-radius:9px;border:none;cursor:pointer;transition:all 0.15s;text-transform:uppercase;letter-spacing:0.5px}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 10px rgba(0,82,255,0.2)}
+  .btn-primary:hover{background:#1a65ff;transform:translateY(-1px)}
+  .btn-secondary{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+  .btn-secondary:hover{color:var(--text);border-color:var(--border2)}
+  .add-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .add-row input{flex:1;min-width:80px;font-family:var(--fm);font-size:13px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);outline:none}
+  .add-row input:focus{border-color:var(--accent)}
+  .add-row input::placeholder{color:var(--muted2)}
+  .btn-add{font-family:var(--fm);font-size:13px;font-weight:700;padding:9px 14px;border-radius:8px;border:none;cursor:pointer;background:var(--accent);color:#fff;white-space:nowrap}
+  .btn-add:hover{background:#1a65ff}
+  .stock-grid,.portfolio-grid{display:flex;flex-direction:column;gap:6px}
+  .stock-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:9px;padding:10px 13px;border:1px solid var(--border)}
+  .stock-row.active-ticker{border-color:var(--accent);background:var(--accent-dim)}
+  .stock-sym{font-family:var(--fm);font-size:14px;font-weight:700;width:96px}
+  .stock-price{font-family:var(--fm);font-size:14px;flex:1}
+  .stock-ath{font-family:var(--fm);font-size:11px;color:var(--muted);width:96px;text-align:center;line-height:1.4}
+  .stock-drop{font-family:var(--fm);font-size:12px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--red-dim);color:var(--red);width:54px;text-align:center}
+  .stock-score{font-family:var(--fm);font-size:13px;width:34px;text-align:center}
+  .btn-select{font-family:var(--fm);font-size:11px;font-weight:700;padding:4px 9px;border-radius:5px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer}
+  .btn-select:hover,.stock-row.active-ticker .btn-select{background:var(--accent);color:#fff}
+  .btn-remove{font-family:var(--fm);font-size:11px;padding:4px 7px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer}
+  .btn-remove:hover{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+  .save-badge{font-size:10px;font-family:var(--fm);padding:2px 8px;border-radius:4px;background:var(--green-dim);color:var(--green);border:1px solid rgba(0,168,107,0.2);margin-left:6px;display:none}
+  .save-badge.show{display:inline-block}
+  .form-row{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+  .form-label{font-size:12px;font-family:var(--fm);color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+  .form-input{font-family:var(--fm);font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);outline:none;width:100%}
+  .form-input:focus{border-color:var(--accent)}
+  .form-input::placeholder{color:var(--muted2)}
+  .checkbox-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+  .checkbox-item{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 4px;cursor:pointer}
+  .checkbox-item.checked{background:var(--accent-dim);border-color:var(--accent)}
+  .checkbox-item input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+  .checkbox-item span{font-family:var(--fm);font-size:10px;font-weight:700;color:var(--muted)}
+  .checkbox-item.checked span{color:var(--accent)}
+  .notif-toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 14px;margin-bottom:7px}
+  .toggle-label{font-size:13px;font-family:var(--fm);color:var(--text);font-weight:700}
+  .toggle-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--fm)}
+  .toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+  .toggle input{opacity:0;width:0;height:0}
+  .toggle-slider{position:absolute;inset:0;background:var(--surface3);border-radius:11px;cursor:pointer;transition:0.2s;border:1px solid var(--border2)}
+  .toggle input:checked+.toggle-slider{background:var(--accent);border-color:var(--accent)}
+  .toggle-slider:before{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;background:#fff;border-radius:50%;transition:0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
+  .toggle input:checked+.toggle-slider:before{transform:translateX(18px)}
+  .wide-btn{width:100%;font-family:var(--fm);font-size:13px;font-weight:700;padding:11px;border-radius:9px;cursor:pointer;margin-top:6px;text-transform:uppercase;letter-spacing:0.5px;transition:all 0.15s}
+  .wide-btn.solid{border:none;background:var(--accent);color:#fff;box-shadow:0 2px 10px rgba(0,82,255,0.18)}
+  .wide-btn.solid:hover{background:#1a65ff}
+  .wide-btn.outline{border:1.5px solid var(--accent);background:transparent;color:var(--accent)}
+  .wide-btn.outline:hover{background:var(--accent);color:#fff}
+  .wide-btn.outline.purple{border-color:var(--purple);color:var(--purple)}
+  .wide-btn.outline.purple:hover{background:var(--purple);color:#fff}
+  .alert-banner{display:none;border-radius:9px;padding:10px 14px;font-family:var(--fm);font-size:13px;font-weight:700;margin-top:8px}
+  .alert-banner.show{display:block}
+  .alert-banner.ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,168,107,0.25)}
+  .alert-banner.warn{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(217,119,6,0.2)}
+  .log-entry{font-size:12px;font-family:var(--fm);color:var(--muted);padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:10px}
+  .log-entry:last-child{border-bottom:none}
+  .log-time{color:var(--accent);flex-shrink:0;font-weight:700}
+  .log-msg.alert{color:var(--amber)}.log-msg.buy{color:var(--green)}.log-msg.info{color:var(--accent)}.log-msg.email{color:var(--purple)}.log-msg.live{color:var(--green)}.log-msg.sms{color:#0891b2}.log-msg.save{color:var(--green)}
+  .rec-badge{font-size:12px;font-family:var(--fm);padding:4px 11px;border-radius:20px;font-weight:700}
+  .rec-strong{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,168,107,0.25)}
+  .rec-wait{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(217,119,6,0.2)}
+  .rec-avoid{background:var(--red-dim);color:var(--red);border:1px solid rgba(224,49,49,0.2)}
+  .pf-sym{font-family:var(--fm);font-size:13px;font-weight:700;width:60px}
+  .pf-qty{font-family:var(--fm);font-size:12px;color:var(--muted);width:44px}
+  .pf-buy{font-family:var(--fm);font-size:12px;color:var(--muted);width:64px}
+  .pf-current{font-family:var(--fm);font-size:13px;font-weight:700;width:64px}
+  .pf-pnl{font-family:var(--fm);font-size:13px;font-weight:700;flex:1;text-align:right}
+  .pf-total{display:flex;justify-content:space-between;padding:12px 14px;background:var(--accent-dim);border-radius:9px;border:1px solid rgba(0,82,255,0.12);margin-top:10px}
+  .pf-total-label{font-family:var(--fm);font-size:13px;color:var(--muted);font-weight:700}
+  .pf-total-val{font-family:var(--fm);font-size:16px;font-weight:800}
+</style>
+
+<div class="app">
+  <div class="header">
+    <div class="logo">CRASH<span>BUY</span> PRO <span style="font-size:11px;color:var(--green);font-weight:700;background:var(--green-dim);padding:2px 8px;border-radius:4px;border:1px solid rgba(0,168,107,0.2);margin-left:4px">PERSISTENT</span></div>
+    <div class="header-right">
+      <button class="refresh-btn" onclick="fetchAllPrices()">↻ REFRESH</button>
+      <div class="status-pill"><div class="dot loading" id="statusDot"></div><span id="statusText">LOADING...</span></div>
+    </div>
+  </div>
+
+  <div class="live-banner warn" id="liveBanner">
+    <span class="spinner"></span><span id="bannerMsg">Loading watchlist from backend...</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="tab" onclick="switchTab('stocks')">Stocks</button>
+    <button class="tab" onclick="switchTab('portfolio')">Portfolio</button>
+    <button class="tab" onclick="switchTab('alerts')">Alerts</button>
+    <button class="tab" onclick="switchTab('log')">Log</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="section-card">
+      <div class="chart-header">
+        <div>
+          <div class="price-big" id="currentPrice">—</div>
+          <div class="price-change change-neg" id="priceChange">Loading...</div>
+          <div class="last-updated" id="lastUpdated"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="chart-label">WATCHING</div>
+          <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+            <div style="font-size:14px;font-weight:800;font-family:var(--fm);color:var(--accent)" id="activeTickerLabel">—</div>
+            <span id="assetTypeTag" style="font-size:9px;font-family:var(--fm);font-weight:700;padding:2px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);text-transform:uppercase;letter-spacing:0.3px">—</span>
+          </div>
+          <div style="font-size:11px;font-family:var(--fd);color:var(--muted);margin-top:2px;max-width:180px" id="activeNameLabel">—</div>
+          <div style="margin-top:4px" id="sourceTag"><span class="source-tag source-sim">LOADING</span></div>
+          <div class="chart-label" style="margin-top:5px">24H DROP</div>
+          <div class="chart-val" id="crashDepth" style="color:var(--red)">—</div>
+          <div class="chart-label" style="margin-top:3px">REALIZED VOL</div>
+          <div class="chart-val" id="volSpike" style="color:var(--amber)">—</div>
+        </div>
+      </div>
+      <div class="range-tabs" id="rangeTabs">
+        <button class="range-tab active" data-range="1D" onclick="setRange('1D')">1D</button>
+        <button class="range-tab" data-range="1W" onclick="setRange('1W')">1W</button>
+        <button class="range-tab" data-range="1M" onclick="setRange('1M')">1M</button>
+        <button class="range-tab" data-range="3M" onclick="setRange('3M')">3M</button>
+        <button class="range-tab" data-range="6M" onclick="setRange('6M')">6M</button>
+        <button class="range-tab" data-range="YTD" onclick="setRange('YTD')">YTD</button>
+        <button class="range-tab" data-range="1Y" onclick="setRange('1Y')">1Y</button>
+      </div>
+      <div class="chart-ticker-label" id="chartTickerLabel">
+        <span id="chartTickerMain">—</span>
+        <span id="chartTickerName" style="font-weight:600;color:var(--muted);margin-left:6px"></span>
+      </div>
+      <div class="chart-loading" id="chartLoading" style="display:none"><span class="spinner"></span> Loading price history…</div>
+      <div class="chart-fullbleed">
+        <canvas id="priceChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:var(--red)"></div><span id="priceLegendLabel">Price</span></div>
+        <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:#0f172a"></div>ATH</div>
+        <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:var(--amber)"></div>-10% buy</div>
+        <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:var(--accent)"></div>-20% buy</div>
+        <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:var(--purple)"></div>-30% buy</div>
+        <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:var(--red)"></div>-40% buy</div>
+      </div>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="metric-label">RSI</div><div class="metric-value amber" id="rsiVal">—</div></div>
+      <div class="metric-card"><div class="metric-label">Fear Index</div><div class="metric-value red" id="fearVal">—</div></div>
+      <div class="metric-card"><div class="metric-label">24h Change</div><div class="metric-value red" id="dropPct">—</div></div>
+      <div class="metric-card"><div class="metric-label">Buy Score</div><div class="metric-value blue" id="buyScore">—</div></div>
+      <div class="metric-card"><div class="metric-label">52W H</div><div class="metric-value" id="wk52High" style="color:var(--text)">—</div></div>
+      <div class="metric-card"><div class="metric-label">52W L</div><div class="metric-value" id="wk52Low" style="color:var(--text)">—</div></div>
+    </div>
+    <div class="section-card">
+      <div class="section-title">Drop Thresholds — tap to set trigger</div>
+      <div class="threshold-grid" id="thresholdGrid"></div>
+    </div>
+    <div class="section-card">
+      <div class="section-title">Signal Breakdown</div>
+      <div style="font-family:var(--fm);font-size:9px;color:var(--muted2);margin:-4px 0 10px">WEIGHTS · RSI 25 · DRAWDOWN 30 · FEAR 20 · VOLATILITY 10 · SUPPORT/TREND 15</div>
+      <div class="signal-bars">
+        <div class="signal-row"><div class="signal-name">RSI</div><div class="signal-bar-track"><div class="signal-bar-fill" id="bar-rsi" style="width:0%"></div></div><div class="signal-score" id="sc-rsi">—</div></div>
+        <div class="signal-row"><div class="signal-name">Drawdown</div><div class="signal-bar-track"><div class="signal-bar-fill" id="bar-dd" style="width:0%"></div></div><div class="signal-score" id="sc-dd">—</div></div>
+        <div class="signal-row"><div class="signal-name">Volatility</div><div class="signal-bar-track"><div class="signal-bar-fill" id="bar-vol" style="width:0%"></div></div><div class="signal-score" id="sc-vol">—</div></div>
+        <div class="signal-row"><div class="signal-name">Fear/Greed</div><div class="signal-bar-track"><div class="signal-bar-fill" id="bar-fg" style="width:0%"></div></div><div class="signal-score" id="sc-fg">—</div></div>
+        <div class="signal-row"><div class="signal-name">Support / Trend</div><div class="signal-bar-track"><div class="signal-bar-fill" id="bar-sup" style="width:0%"></div></div><div class="signal-score" id="sc-sup">—</div></div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span>Market News</span>
+        <span id="newsUpdated" style="font-size:9px;color:var(--muted2);text-transform:none;letter-spacing:0;font-weight:400"></span>
+      </div>
+      <div id="newsList">
+        <div style="font-family:var(--fm);font-size:12px;color:var(--muted2);padding:8px 0">Select a stock to load news.</div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-title">Strategy Parameters</div>
+      <div class="param-row"><div class="param-label">Capital to deploy ($)</div><input type="range" min="1000" max="50000" value="10000" step="500" id="capitalSlider" oninput="updateParams()"><div class="param-val" id="capitalVal">$10,000</div></div>
+      <div class="param-row"><div class="param-label">Tranches</div><input type="range" min="2" max="5" value="3" step="1" id="trancheSlider" oninput="updateParams()"><div class="param-val" id="trancheVal">3</div></div>
+      <div class="param-row"><div class="param-label">Stop-loss %</div><input type="range" min="5" max="30" value="15" step="1" id="stopSlider" oninput="updateParams()"><div class="param-val" id="stopVal">-15%</div></div>
+    </div>
+    <div class="section-card">
+      <div class="row-between">
+        <div class="section-title" style="margin-bottom:0">Tranche Execution Plan</div>
+        <div class="rec-badge rec-wait" id="recBadge">—</div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="tranche-list" id="trancheList"></div>
+      <div class="action-row">
+        <button class="btn btn-primary" onclick="executeBuy()">EXECUTE PLAN ↗</button>
+        <button class="btn btn-secondary" onclick="simulateDrop()">SIMULATE DROP</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STOCKS -->
+  <div class="panel" id="panel-stocks">
+    <div class="section-card">
+      <div class="row-between" style="margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">Watchlist <span class="save-badge" id="saveBadge">SAVED ✔</span></div>
+        <div style="font-size:10px;font-family:var(--fm);color:var(--green)">● Saved to backend</div>
+      </div>
+      <div class="add-row">
+        <input type="text" id="newSymbol" placeholder="Ticker or CoinGecko ID">
+        <input type="text" id="newLabel" placeholder="Label" style="max-width:100px">
+        <button class="btn-add" onclick="addStock()">+ ADD</button>
+      </div>
+      <div style="font-size:10px;font-family:var(--fm);color:var(--muted2);margin-bottom:12px">
+        Stocks: SPY, AAPL, TSLA → backend (UPPERCASE)<br>
+        Crypto: bitcoin, solana, cardano → CoinGecko (lowercase)
+      </div>
+      <div class="stock-grid" id="stockGrid"></div>
+    </div>
+  </div>
+
+  <!-- PORTFOLIO -->
+  <div class="panel" id="panel-portfolio">
+    <div class="section-card">
+      <div class="row-between" style="margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">Add Position</div>
+        <div style="font-size:10px;font-family:var(--fm);color:var(--green)">● Saved to backend</div>
+      </div>
+      <div class="add-row">
+        <input type="text" id="pfSym" placeholder="Symbol" oninput="this.value=this.value.toUpperCase()" style="max-width:80px">
+        <input type="number" id="pfQty" placeholder="Qty" style="max-width:70px">
+        <input type="number" id="pfBuy" placeholder="Buy price" style="max-width:100px">
+        <button class="btn-add" onclick="addPosition()">+ ADD</button>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-title">Positions</div>
+      <div class="portfolio-grid" id="portfolioGrid"></div>
+      <div class="pf-total" id="pfTotal" style="display:none">
+        <div><div class="pf-total-label">Total P&L</div><div style="font-size:10px;font-family:var(--fm);color:var(--muted)">vs buy price</div></div>
+        <div class="pf-total-val" id="pfTotalVal">$0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTS -->
+  <div class="panel" id="panel-alerts">
+    <div class="section-card">
+      <div class="row-between" style="margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">Alert Settings</div>
+        <div style="font-size:10px;font-family:var(--fm);color:var(--green)">● Saved to backend</div>
+      </div>
+      <div class="form-row"><div class="form-label">Primary Email</div><input class="form-input" type="email" id="emailPrimary" placeholder="you@example.com" oninput="scheduleSettingsSave()"></div>
+      <div class="form-row"><div class="form-label">CC Email (optional)</div><input class="form-input" type="email" id="emailCC" placeholder="colleague@example.com" oninput="scheduleSettingsSave()"></div>
+      <div class="form-row"><div class="form-label">SMS Phone (optional)</div><input class="form-input" type="tel" id="smsPhone" placeholder="+6591234567" oninput="scheduleSettingsSave()"></div>
+    </div>
+    <div class="section-card">
+      <div class="section-title">Notify when drop reaches</div>
+      <div class="checkbox-grid" id="notifThresholds"></div>
+      <div class="notif-toggle-row"><div><div class="toggle-label">Buy Signal Alert</div><div class="toggle-sub">Score ≥ 70</div></div><label class="toggle"><input type="checkbox" id="tog1" checked onchange="scheduleSettingsSave()"><div class="toggle-slider"></div></label></div>
+      <div class="notif-toggle-row"><div><div class="toggle-label">Tranche Trigger</div><div class="toggle-sub">When tranche fires</div></div><label class="toggle"><input type="checkbox" id="tog2" checked onchange="scheduleSettingsSave()"><div class="toggle-slider"></div></label></div>
+      <div class="notif-toggle-row"><div><div class="toggle-label">Stop-Loss Warning</div><div class="toggle-sub">Price hits stop-loss</div></div><label class="toggle"><input type="checkbox" id="tog3" checked onchange="scheduleSettingsSave()"><div class="toggle-slider"></div></label></div>
+      <div class="notif-toggle-row"><div><div class="toggle-label">SMS on Tranche Fire</div><div class="toggle-sub">Also send SMS</div></div><label class="toggle"><input type="checkbox" id="tog4" onchange="scheduleSettingsSave()"><div class="toggle-slider"></div></label></div>
+    </div>
+    <button class="wide-btn outline" onclick="testEmail()">SEND TEST EMAIL ↗</button>
+    <button class="wide-btn outline purple" onclick="testSMS()" style="margin-top:6px">SEND TEST SMS ↗</button>
+    <div class="alert-banner" id="alertBanner"></div>
+  </div>
+
+  <!-- LOG -->
+  <div class="panel" id="panel-log">
+    <div class="section-card">
+      <div class="row-between" style="margin-bottom:12px">
+        <div class="section-title" style="margin-bottom:0">Activity Log</div>
+        <button class="btn-remove" onclick="clearLog()">Clear</button>
+      </div>
+      <div id="logList"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+const BACKEND = 'https://crashbuy-backend.onrender.com';
+const DROP_LEVELS = [-5,-10,-15,-20,-25,-30,-35,-40,-45,-50];
+let selectedThreshold = -10;
+let activeIdx = 0;
+let simulationStep = 0;
+let chartInstance = null;
+let currentRange = '1D';
+// v18: deterministic technical-analysis cache. Cached for 5 minutes so
+// the dashboard does not re-download a full year of history every minute.
+const technicalCache = new Map();
+const TECH_CACHE_MS = 5 * 60 * 1000;
+function daysSinceYearStart(){
+  const now=new Date();
+  const start=new Date(now.getFullYear(),0,1);
+  return Math.max(1,(now-start)/86400000);
+}
+function labelForSpan(msAgo,spanDays){
+  const d=new Date(Date.now()-msAgo);
+  if(spanDays<=1)return d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+  if(spanDays<=7)return d.toLocaleDateString([], {weekday:'short'});
+  if(spanDays<=200)return d.toLocaleDateString([], {month:'short',day:'numeric'});
+  return d.toLocaleDateString([], {month:'short',year:'2-digit'});
+}
+const RANGE_DEFS=[
+  {key:'1D',spanDays:1,points:48,dropFactor:1,athMult:1.00},
+  {key:'1W',spanDays:7,points:42,dropFactor:1.6,athMult:1.04},
+  {key:'1M',spanDays:30,points:30,dropFactor:2.4,athMult:1.10},
+  {key:'3M',spanDays:90,points:36,dropFactor:3.2,athMult:1.18},
+  {key:'6M',spanDays:182,points:36,dropFactor:3.8,athMult:1.28},
+  {key:'YTD',spanDays:null,points:30,dropFactor:3.5,athMult:1.25},
+  {key:'1Y',spanDays:365,points:36,dropFactor:4.2,athMult:1.42},
+];
+const RANGE_CFG={};
+RANGE_DEFS.forEach(def=>{
+  RANGE_CFG[def.key]={
+    points:def.points,dropFactor:def.dropFactor,athMult:def.athMult,
+    spanMs:()=>(def.spanDays!=null?def.spanDays:daysSinceYearStart())*86400000
+  };
+});
+let fearGreedValue = 50;
+let stocks = [];
+let portfolio = [];
+let settingsSaveTimer = null;
+
+// ── Load everything from backend on startup ──
+async function init() {
+  addLog('info', 'Loading saved data from backend...');
+  await Promise.all([loadWatchlist(), loadPortfolio(), loadSettings()]);
+  await fetchAllPrices();
+}
+
+async function loadWatchlist() {
+  try {
+    const r = await fetch(`${BACKEND}/api/watchlist`);
+    const d = await r.json();
+    stocks = d.watchlist.map(s => ({...s, price:0, drop:0, rsi:0, fear:0, vol:1, isLive:false}));
+    addLog('save', `✔ Watchlist loaded: ${stocks.map(s=>s.sym).join(', ')}`);
+  } catch {
+    // fallback defaults
+    stocks = [
+      {sym:'SPY',type:'stock',cgId:null,price:0,drop:0,rsi:0,fear:0,vol:1,isLive:false},
+      {sym:'QQQ',type:'stock',cgId:null,price:0,drop:0,rsi:0,fear:0,vol:1,isLive:false},
+      {sym:'NVDA',type:'stock',cgId:null,price:0,drop:0,rsi:0,fear:0,vol:1,isLive:false},
+      {sym:'BTC/USD',type:'crypto',cgId:'bitcoin',price:0,drop:0,rsi:0,fear:0,vol:1,isLive:false},
+      {sym:'ETH/USD',type:'crypto',cgId:'ethereum',price:0,drop:0,rsi:0,fear:0,vol:1,isLive:false},
+      {sym:'SOL/USD',type:'crypto',cgId:'solana',price:0,drop:0,rsi:0,fear:0,vol:1,isLive:false},
+    ];
+    addLog('alert', '⚠ Could not load watchlist from backend — using defaults');
+  }
+}
+
+async function loadPortfolio() {
+  try {
+    const r = await fetch(`${BACKEND}/api/portfolio`);
+    const d = await r.json();
+    portfolio = d.portfolio;
+    if (portfolio.length) addLog('save', `✔ Portfolio loaded: ${portfolio.length} positions`);
+  } catch { addLog('alert', '⚠ Could not load portfolio'); }
+}
+
+async function loadSettings() {
+  try {
+    const r = await fetch(`${BACKEND}/api/settings`);
+    const d = await r.json();
+    if (d.email) document.getElementById('emailPrimary').value = d.email;
+    if (d.emailCC) document.getElementById('emailCC').value = d.emailCC;
+    if (d.phone) document.getElementById('smsPhone').value = d.phone;
+    if (d.tog1 !== undefined) document.getElementById('tog1').checked = d.tog1;
+    if (d.tog2 !== undefined) document.getElementById('tog2').checked = d.tog2;
+    if (d.tog3 !== undefined) document.getElementById('tog3').checked = d.tog3;
+    if (d.tog4 !== undefined) document.getElementById('tog4').checked = d.tog4;
+    if (d.threshold) selectedThreshold = d.threshold;
+    if (d.capital) document.getElementById('capitalSlider').value = d.capital;
+    if (d.tranches) document.getElementById('trancheSlider').value = d.tranches;
+    if (d.stopLoss) document.getElementById('stopSlider').value = d.stopLoss;
+    updateParams();
+    addLog('save', '✔ Settings loaded from backend');
+  } catch { addLog('alert', '⚠ Could not load settings'); }
+}
+
+async function saveSettings() {
+  try {
+    await fetch(`${BACKEND}/api/settings`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        email: document.getElementById('emailPrimary').value,
+        emailCC: document.getElementById('emailCC').value,
+        phone: document.getElementById('smsPhone').value,
+        tog1: document.getElementById('tog1').checked,
+        tog2: document.getElementById('tog2').checked,
+        tog3: document.getElementById('tog3').checked,
+        tog4: document.getElementById('tog4').checked,
+        threshold: selectedThreshold,
+        capital: document.getElementById('capitalSlider').value,
+        tranches: document.getElementById('trancheSlider').value,
+        stopLoss: document.getElementById('stopSlider').value,
+      })
+    });
+    showSaveBadge();
+    addLog('save', '✔ Settings auto-saved to backend');
+  } catch { addLog('alert', '⚠ Settings save failed'); }
+}
+
+function scheduleSettingsSave() {
+  clearTimeout(settingsSaveTimer);
+  settingsSaveTimer = setTimeout(saveSettings, 1500);
+}
+
+function showSaveBadge() {
+  const b = document.getElementById('saveBadge');
+  b.classList.add('show');
+  setTimeout(() => b.classList.remove('show'), 2000);
+}
+
+// ── Price fetching ────────────────────────────
+async function fetchStockPrice(symbol) {
+  const r = await fetch(`${BACKEND}/api/price/${symbol}`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+async function fetchCryptoPrice(cgId) {
+  const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd&include_24hr_change=true`);
+  const d = await r.json(); return d[cgId];
+}
+async function fetchFearGreed() {
+  try { const r=await fetch('https://api.alternative.me/fng/?limit=1'); const d=await r.json(); return parseInt(d.data[0].value); } catch { return 50; }
+}
+
+async function fetchAllPrices() {
+  setStatus('loading','UPDATING...');
+  setBanner('warn','<span class="spinner"></span> Fetching live prices + technicals...');
+  let liveCount = 0;
+  try { fearGreedValue = await fetchFearGreed(); } catch {}
+  for (let i = 0; i < stocks.length; i++) {
+    const s = stocks[i];
+    try {
+      if (s.type === 'stock') {
+        const d = await fetchStockPrice(s.sym);
+        if (d && d.price) {
+          const drop = d.changePct < 0 ? +Math.abs(d.changePct).toFixed(2) : 0;
+          stocks[i] = {
+            ...s,
+            price: d.price,
+            drop,
+            fear: fearGreedValue,
+            isLive: true,
+            fiftyTwoWeekHigh: d.fiftyTwoWeekHigh || s.fiftyTwoWeekHigh || null,
+            fiftyTwoWeekLow: d.fiftyTwoWeekLow || s.fiftyTwoWeekLow || null,
+            name: d.name || s.name || null
+          };
+          liveCount++;
+        }
+      } else {
+        const d = await fetchCryptoPrice(s.cgId);
+        if (d && d.usd) {
+          const change24 = d.usd_24h_change || 0;
+          const drop = change24 < 0 ? +Math.abs(change24).toFixed(2) : 0;
+          stocks[i] = {
+            ...s,
+            price: d.usd,
+            drop,
+            fear: fearGreedValue,
+            isLive: true
+          };
+          liveCount++;
+        }
+      }
+
+      // v18: calculate RSI, realized volatility and support/trend from
+      // historical prices. No Math.random() is used anywhere in the score.
+      if (stocks[i].price > 0) {
+        const metrics = await getTechnicalMetrics(stocks[i]);
+        stocks[i] = {...stocks[i], ...metrics};
+      }
+    } catch(e) {
+      addLog('alert',`⚠ Failed: ${s.sym} — ${e.message || 'data error'}`);
+    }
+  }
+  if (liveCount > 0) {
+    setStatus('live',`LIVE (${liveCount}/${stocks.length})`);
+    setBanner('ok',`✔ ${liveCount} live prices · Technicals: historical data · F&G: ${fearGreedValue}`);
+    addLog('live',`✔ ${liveCount} prices + technicals updated`);
+  } else {
+    setStatus('offline','OFFLINE');
+    setBanner('error','⚠ Price backend unreachable — Render may be sleeping. Wait 30s and refresh.');
+  }
+  updateDisplay(stocks[activeIdx]);
+  initChart(activeIdx);
+  buildStockGrid();
+  updatePortfolio();
+  setTimeout(()=>hideBanner(),7000);
+}
+function setStatus(state,text){
+  document.getElementById('statusDot').className='dot'+(state==='offline'?' offline':state==='loading'?' loading':'');
+  document.getElementById('statusText').textContent=text;
+}
+function setBanner(type,msg){const b=document.getElementById('liveBanner');b.className='live-banner '+type;b.innerHTML=msg;b.style.display='flex';}
+function hideBanner(){document.getElementById('liveBanner').style.display='none';}
+
+function switchTab(t){
+  const ids=['dashboard','stocks','portfolio','alerts','log'];
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',ids[i]===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+}
+
+function buildThresholdGrid(){
+  const g=document.getElementById('thresholdGrid');g.innerHTML='';
+  const d=stocks[activeIdx]||{drop:0,drawdown:0};
+  // Use real cumulative drawdown from the 52W high when we have it — d.drop
+  // is only the 24h change, which doesn't reflect whether a tranche has
+  // actually been crossed for a stock that fell gradually over weeks/months.
+  const crashPct=Number.isFinite(d.drawdown)?d.drawdown:d.drop;
+  DROP_LEVELS.forEach(lv=>{
+    const btn=document.createElement('button');btn.className='threshold-btn';
+    const abs=Math.abs(lv);
+    if(crashPct>=abs+3) btn.classList.add('past');
+    else if(crashPct>=abs) btn.classList.add('triggered');
+    else if(lv===selectedThreshold) btn.classList.add('selected');
+    btn.textContent=lv+'%';
+    btn.onclick=()=>{selectedThreshold=lv;buildThresholdGrid();updateTranches(d);scheduleSettingsSave();};
+    g.appendChild(btn);
+  });
+}
+
+function buildNotifThresholds(){
+  const g=document.getElementById('notifThresholds');g.innerHTML='';
+  const checked=new Set([-10,-20,-30,-40,-50]);
+  DROP_LEVELS.forEach(lv=>{
+    const item=document.createElement('div');
+    item.className='checkbox-item'+(checked.has(lv)?' checked':'');
+    item.innerHTML=`<input type="checkbox" ${checked.has(lv)?'checked':''} onchange="this.parentElement.classList.toggle('checked',this.checked);scheduleSettingsSave()"><span>${lv}%</span>`;
+    g.appendChild(item);
+  });
+}
+
+// Known display names for the default watchlist symbols. For anything added
+// later via addStock() that isn't in this map, we fall back to whatever
+// name the backend/CoinGecko returns for it, and finally to the raw symbol.
+const NAME_MAP = {
+  'SPY':'SPDR S&P 500 ETF Trust',
+  'QQQ':'Invesco QQQ Trust',
+  'NVDA':'NVIDIA Corp',
+  'BTC/USD':'Bitcoin',
+  'ETH/USD':'Ethereum',
+  'SOL/USD':'Solana',
+  'A7RU.SI':'Keppel Infrastructure Trust',
+};
+function nameOf(s){ return (s && (s.name || NAME_MAP[s.sym])) || (s?s.sym:''); }
+function hasRealName(s){ const n=nameOf(s); return n && n!==s.sym; }
+
+function fmtPrice(v){return v>10?'$'+v.toLocaleString(undefined,{maximumFractionDigits:2}):'$'+v.toFixed(4);}
+function athOf(s){return s.price>0?s.price/(1-Math.max(s.drop,0.5)/100):0;}
+// 52W H/L follow the standard definition: the highest and lowest closing price
+// over the trailing 52 weeks. When real data isn't available (backend history
+// route unavailable for this symbol), we fall back to the max/min of the same
+// simulated 1Y series used for the 1Y chart view, so the fallback number is at
+// least internally consistent with what the chart itself shows for that period.
+function week52Stats(s){
+  if(!s||!s.price)return{high:0,low:0};
+  const sim=generatePriceData(s,'1Y');
+  const high=Math.max(...sim.prices,s.price);
+  const low=Math.min(...sim.prices,s.price);
+  return{high,low};
+}
+let week52ReqId=0;
+async function updateWeek52(d){
+  const myReq=++week52ReqId;
+  const wk=await getWeek52Stats(d);
+  if(myReq!==week52ReqId)return; // superseded by a newer stock selection
+  // Cache onto the stock object so the tranche plan (and anything else) has a
+  // stable 52W-high reference to anchor to, instead of recomputing a fresh
+  // (possibly randomized, for simulated fallbacks) value on every render.
+  d.fiftyTwoWeekHigh=wk.high; d.fiftyTwoWeekLow=wk.low;
+  if(stocks[activeIdx]===d)updateTranches(d);
+  document.getElementById('wk52High').textContent=fmtPrice(wk.high)+(wk.isReal?'':' *');
+  document.getElementById('wk52Low').textContent=fmtPrice(wk.low)+(wk.isReal?'':' *');
+}
+
+function buildStockGrid(){
+  const g=document.getElementById('stockGrid');g.innerHTML='';
+  if(!stocks.length){g.innerHTML='<div style="font-family:var(--fm);font-size:12px;color:var(--muted2);padding:12px 0">No stocks in watchlist.</div>';return;}
+  stocks.forEach((s,i)=>{
+    const score=calcScore(s);
+    const pFmt=fmtPrice(s.price);
+    // 52W High per stock: use the cached real figure once we have it; kick off
+    // a one-time background fetch per stock if we don't (guarded so it only
+    // fires once, not on every grid re-render/price poll).
+    if(s.price>0 && s.fiftyTwoWeekHigh==null && !s._wk52Fetching){
+      s._wk52Fetching=true;
+      getWeek52Stats(s).then(wk=>{
+        s.fiftyTwoWeekHigh=wk.high; s.fiftyTwoWeekLow=wk.low; s._wk52Real=wk.isReal; s._wk52Fetching=false;
+        buildStockGrid();
+      }).catch(()=>{ s._wk52Fetching=false; });
+    }
+    const wkHigh=s.fiftyTwoWeekHigh;
+    const wkFmt=s.price>0?(wkHigh?fmtPrice(wkHigh)+(s._wk52Real?'':' *'):'…'):'—';
+    const diffPct=(wkHigh && s.price>0)?((s.price/wkHigh-1)*100):null;
+    const diffFmt=diffPct!=null?(diffPct>=0?'+':'')+diffPct.toFixed(1)+'%':'—';
+    const diffColor=diffPct==null?'var(--muted)':diffPct<0?'var(--red)':'var(--green)';
+    const row=document.createElement('div');
+    row.className='stock-row'+(i===activeIdx?' active-ticker':'');
+    row.innerHTML=`
+      <div class="stock-sym">${s.sym}${hasRealName(s)?`<div style="font-size:9px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:1px;white-space:normal">${nameOf(s)}</div>`:''}</div>
+      <div class="stock-price">${s.price>0?pFmt:'—'} <span class="source-tag ${s.isLive?'source-live':'source-sim'}" style="font-size:9px">${s.isLive?'LIVE':'—'}</span></div>
+      <div class="stock-ath"><div>52W H ${wkFmt}</div><div style="font-size:9px;color:${diffColor};margin-top:1px">${diffFmt} off high</div></div>
+      <div class="stock-drop">${(Number.isFinite(s.drawdown)?s.drawdown:s.drop)>0?'-'+(Number.isFinite(s.drawdown)?s.drawdown:s.drop).toFixed(1)+'%':'flat'}</div>
+      <div class="stock-score" style="color:${score>=70?'var(--green)':score>=45?'var(--amber)':'var(--red)'}">${score}</div>
+      <button class="btn-select" onclick="selectStock(${i})">${i===activeIdx?'ACTIVE':'VIEW'}</button>
+      <button class="btn-remove" onclick="removeStock(${i})">✕</button>`;
+    g.appendChild(row);
+  });
+}
+
+function clamp(v,min=0,max=100){return Math.max(min,Math.min(max,v));}
+
+function scoreRSI(rsi){
+  if(!Number.isFinite(rsi)) return null;
+  if(rsi<=25) return 100;
+  if(rsi<=30) return 90;
+  if(rsi<=35) return 80;
+  if(rsi<=40) return 68;
+  if(rsi<=45) return 55;
+  if(rsi<=50) return 42;
+  if(rsi<=55) return 30;
+  if(rsi<=60) return 18;
+  if(rsi<=70) return 8;
+  return 0;
+}
+
+function scoreDrawdown(drawdown){
+  if(!Number.isFinite(drawdown)) return null;
+  return clamp(drawdown/20*100);
+}
+
+function scoreFear(fear){
+  if(!Number.isFinite(fear)) return null;
+  // Lower Fear & Greed = more fear = greater contrarian opportunity.
+  return clamp((50-fear)/50*100);
+}
+
+function scoreVolatility(annualizedPct){
+  if(!Number.isFinite(annualizedPct)) return null;
+  // Reward elevated realized volatility, but cap the contribution.
+  return clamp((annualizedPct-10)/(50-10)*100);
+}
+
+function scoreSupportTrend(s){
+  const parts=[];
+  if(Number.isFinite(s.rangePosition)) parts.push(s.rangePosition);
+  if(Number.isFinite(s.ma50Distance)) {
+    // Below the 50D average is more attractive for a dip buyer, but
+    // extremely far below it is not automatically better.
+    parts.push(clamp(50 - s.ma50Distance*8));
+  }
+  if(Number.isFinite(s.recentLowDistance)) {
+    // Near a recent 20D low is a stronger support-zone signal.
+    parts.push(clamp(100 - s.recentLowDistance*12));
+  }
+  return parts.length ? Math.round(parts.reduce((a,b)=>a+b,0)/parts.length) : null;
+}
+
+function calcScore(d){
+  const components = [
+    ['rsi', d.rsiScore, 25],
+    ['drawdown', d.drawdownScore, 30],
+    ['fear', d.fearScore, 20],
+    ['volatility', d.volScore, 10],
+    ['support', d.supportScore, 15]
+  ];
+  let weighted=0, weight=0;
+  components.forEach(([,v,w])=>{
+    if(Number.isFinite(v)){ weighted += v*w; weight += w; }
+  });
+  // Never manufacture a high-confidence score from missing technical data.
+  if(weight < 70) return null;
+  return Math.round(weighted/weight);
+}
+
+async function getTechnicalMetrics(s){
+  const key=s.type==='crypto'?`crypto:${s.cgId}`:`stock:${s.sym}`;
+  const cached=technicalCache.get(key);
+  let series=cached && Date.now()-cached.ts<TECH_CACHE_MS ? cached.series : null;
+
+  if(!series){
+    series = await getOneYearMetricSeries(s);
+    technicalCache.set(key,{ts:Date.now(),series});
+  }
+  if(!series || series.length<16) {
+    return {
+      rsi:null, vol:null, rangePosition:null, ma50Distance:null,
+      recentLowDistance:null, rsiScore:null, drawdownScore:null,
+      fearScore:scoreFear(s.fear), volScore:null, supportScore:null,
+      technicalSource:'incomplete'
+    };
+  }
+
+  const closes=series.map(p=>Number(p[1])).filter(Number.isFinite);
+  const price=s.price;
+  const rsi=computeRSI(closes,14);
+  const returns=[];
+  for(let i=1;i<closes.length;i++){
+    if(closes[i-1]>0) returns.push((closes[i]/closes[i-1]-1)*100);
+  }
+  const last20=returns.slice(-20);
+  const vol=last20.length>=10 ? stddev(last20)*Math.sqrt(252) : null;
+  const last50=closes.slice(-50);
+  const ma50=last50.length?last50.reduce((a,b)=>a+b,0)/last50.length:null;
+  const recent20=closes.slice(-20);
+  const recentLow=recent20.length?Math.min(...recent20):null;
+
+  const wk = (s.type!=='crypto' && s.fiftyTwoWeekHigh && s.fiftyTwoWeekLow)
+    ? {high:s.fiftyTwoWeekHigh,low:s.fiftyTwoWeekLow,isReal:true}
+    : {high:Math.max(...closes,price),low:Math.min(...closes,price),isReal:true};
+  const high=wk.high || Math.max(...closes,price);
+  const low=wk.low || Math.min(...closes,price);
+  const drawdown=high>0?clamp((high-price)/high*100,0,100):null;
+  const rangePosition=(high>low)?clamp((high-price)/(high-low)*100):null;
+  const ma50Distance=ma50?((price/ma50)-1)*100:null;
+  const recentLowDistance=recentLow?((price/recentLow)-1)*100:null;
+
+  const out={
+    rsi:rsi!=null?+rsi.toFixed(1):null,
+    vol:vol!=null?+vol.toFixed(1):null,
+    rangePosition,
+    ma50Distance,
+    recentLowDistance,
+    drawdown,
+    fiftyTwoWeekHigh:high,
+    fiftyTwoWeekLow:low,
+    rsiScore:scoreRSI(rsi),
+    drawdownScore:scoreDrawdown(drawdown),
+    fearScore:scoreFear(s.fear),
+    volScore:scoreVolatility(vol),
+    supportScore:scoreSupportTrend({rangePosition,ma50Distance,recentLowDistance}),
+    technicalSource:wk.isReal?'historical':'fallback'
+  };
+  return out;
+}
+
+function stddev(arr){
+  if(!arr.length) return null;
+  const mean=arr.reduce((a,b)=>a+b,0)/arr.length;
+  const variance=arr.reduce((a,b)=>a+(b-mean)**2,0)/arr.length;
+  return Math.sqrt(variance);
+}
+
+function computeRSI(closes,period=14){
+  if(!Array.isArray(closes) || closes.length<period+1) return null;
+  const changes=[];
+  for(let i=1;i<closes.length;i++) changes.push(closes[i]-closes[i-1]);
+  let gains=0,losses=0;
+  for(let i=0;i<period;i++){
+    const c=changes[i];
+    if(c>=0) gains+=c; else losses-=c;
+  }
+  let avgGain=gains/period, avgLoss=losses/period;
+  for(let i=period;i<changes.length;i++){
+    const c=changes[i];
+    const gain=c>0?c:0, loss=c<0?-c:0;
+    avgGain=(avgGain*(period-1)+gain)/period;
+    avgLoss=(avgLoss*(period-1)+loss)/period;
+  }
+  if(avgLoss===0) return 100;
+  const rs=avgGain/avgLoss;
+  return 100-(100/(1+rs));
+}
+
+async function fetchYahooSeries(symbol,days=365){
+  const end=Math.floor(Date.now()/1000);
+  const start=end-days*86400;
+  const r=await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${start}&period2=${end}&interval=1d&events=history`);
+  if(!r.ok) throw new Error('Yahoo history HTTP '+r.status);
+  const d=await r.json();
+  const result=d?.chart?.result?.[0];
+  if(!result?.timestamp?.length) throw new Error('empty Yahoo history');
+  const closes=result.indicators?.quote?.[0]?.close||[];
+  const out=[];
+  result.timestamp.forEach((ts,i)=>{
+    if(Number.isFinite(closes[i])) out.push([ts*1000,closes[i]]);
+  });
+  if(out.length<16) throw new Error('insufficient Yahoo history');
+  return out;
+}
+
+async function getOneYearMetricSeries(s){
+  try{
+    if(s.type==='crypto') return await fetchCoinGeckoSeries(s.cgId,'1Y');
+    try { return await fetchBackendHistory(s.sym,'1Y'); }
+    catch { return await fetchYahooSeries(s.sym,365); }
+  }catch(e){
+    addLog('alert',`⚠ Technical history unavailable for ${s.sym}`);
+    return [];
+  }
+}
+function selectStock(i){
+  activeIdx=i;simulationStep=0;
+  updateDisplay(stocks[i]);initChart(i);buildStockGrid();switchTab('dashboard');
+  addLog('info',`Switched to ${stocks[i].sym}`);
+}
+
+async function addStock(){
+  const input=document.getElementById('newSymbol').value.trim();
+  const label=(document.getElementById('newLabel').value.trim()||input).toUpperCase();
+  if(!input){addLog('alert','⚠ Enter a ticker or CoinGecko ID.');return;}
+  const isCrypto=/^[a-z][a-z0-9\-]+$/.test(input);
+  const type=isCrypto?'crypto':'stock';
+  const cgId=isCrypto?input:null;
+  const sym=isCrypto?label:input.toUpperCase();
+  if(stocks.find(s=>s.sym===sym)){addLog('alert','⚠ Already in watchlist.');return;}
+  addLog('info',`Adding ${sym}...`);
+  try {
+    // Save to backend first
+    const r=await fetch(`${BACKEND}/api/watchlist`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sym,type,cgId})});
+    const d=await r.json();
+    if(d.error){addLog('alert',`⚠ ${d.error}`);return;}
+    // Fetch live price
+    let price=0,drop=0,fiftyTwoWeekHigh=null,fiftyTwoWeekLow=null,name=null;
+    if(isCrypto){
+      const pd=await fetchCryptoPrice(input);
+      if(pd&&pd.usd){price=pd.usd;const c=pd.usd_24h_change||0;drop=c<0?+Math.abs(c).toFixed(2):0;}
+    } else {
+      const pd=await fetchStockPrice(sym);
+      if(pd&&pd.price){
+        price=pd.price;
+        drop=pd.changePct<0?+Math.abs(pd.changePct).toFixed(2):0;
+        fiftyTwoWeekHigh=pd.fiftyTwoWeekHigh||null;
+        fiftyTwoWeekLow=pd.fiftyTwoWeekLow||null;
+        name=pd.name||null;
+      }
+    }
+    const added={sym,type,cgId,price,drop,fear:fearGreedValue,isLive:price>0,fiftyTwoWeekHigh,fiftyTwoWeekLow,name};
+    if(price>0) Object.assign(added,await getTechnicalMetrics(added));
+    stocks.push(added);
+    document.getElementById('newSymbol').value='';document.getElementById('newLabel').value='';
+    buildStockGrid();
+    showSaveBadge();
+    addLog('save',`✔ ${sym} added & saved to backend`);
+  } catch(e){addLog('alert',`⚠ Failed: ${e.message}`);}
+}
+
+async function removeStock(i){
+  if(stocks.length<=1){addLog('alert','⚠ Keep at least one asset.');return;}
+  const sym=stocks[i].sym;
+  try {
+    await fetch(`${BACKEND}/api/watchlist/${encodeURIComponent(sym)}`,{method:'DELETE'});
+    stocks.splice(i,1);
+    if(activeIdx>=stocks.length) activeIdx=stocks.length-1;
+    updateDisplay(stocks[activeIdx]);initChart(activeIdx);buildStockGrid();
+    showSaveBadge();
+    addLog('save',`✔ ${sym} removed & saved to backend`);
+  } catch(e){addLog('alert',`⚠ Remove failed: ${e.message}`);}
+}
+
+// ── Portfolio ─────────────────────────────────
+async function addPosition(){
+  const sym=document.getElementById('pfSym').value.trim();
+  const qty=parseFloat(document.getElementById('pfQty').value);
+  const buyPrice=parseFloat(document.getElementById('pfBuy').value);
+  if(!sym||!qty||!buyPrice){addLog('alert','⚠ Fill in all fields.');return;}
+  try {
+    const r=await fetch(`${BACKEND}/api/portfolio`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol:sym,qty,buyPrice})});
+    const d=await r.json();
+    portfolio.push(d.entry);
+    document.getElementById('pfSym').value='';document.getElementById('pfQty').value='';document.getElementById('pfBuy').value='';
+    updatePortfolio();showSaveBadge();
+    addLog('save',`✔ ${qty}x ${sym} @ $${buyPrice} saved to backend`);
+  } catch(e){addLog('alert',`⚠ Failed: ${e.message}`);}
+}
+
+async function removePosition(id){
+  try {
+    await fetch(`${BACKEND}/api/portfolio/${id}`,{method:'DELETE'});
+    portfolio=portfolio.filter(p=>p.id!==id);
+    updatePortfolio();showSaveBadge();
+    addLog('save','✔ Position removed from backend');
+  } catch(e){addLog('alert',`⚠ Remove failed: ${e.message}`);}
+}
+
+function updatePortfolio(){
+  const g=document.getElementById('portfolioGrid');g.innerHTML='';
+  if(!portfolio.length){
+    g.innerHTML='<div style="font-family:var(--fm);font-size:12px;color:var(--muted2);padding:12px 0">No positions yet.</div>';
+    document.getElementById('pfTotal').style.display='none';return;
+  }
+  let totalPnl=0;
+  portfolio.forEach(p=>{
+    const stock=stocks.find(s=>s.sym===p.symbol||s.sym===p.symbol+'/USD');
+    const cur=stock&&stock.price>0?stock.price:p.buyPrice;
+    const pnl=(cur-p.buyPrice)*p.qty;
+    const pnlPct=((cur-p.buyPrice)/p.buyPrice*100).toFixed(2);
+    totalPnl+=pnl;
+    const row=document.createElement('div');row.className='portfolio-row';
+    row.innerHTML=`
+      <div class="pf-sym">${p.symbol}</div>
+      <div class="pf-qty">${p.qty}x</div>
+      <div class="pf-buy">@$${p.buyPrice.toFixed(2)}</div>
+      <div class="pf-current" style="color:${cur>=p.buyPrice?'var(--green)':'var(--red)'}">$${cur.toFixed(2)}</div>
+      <div class="pf-pnl" style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}$${pnl.toFixed(2)} (${pnlPct}%)</div>
+      <button class="btn-remove" onclick="removePosition(${p.id})">✕</button>`;
+    g.appendChild(row);
+  });
+  const t=document.getElementById('pfTotal');t.style.display='flex';
+  document.getElementById('pfTotalVal').textContent=(totalPnl>=0?'+':'')+' $'+totalPnl.toFixed(2);
+  document.getElementById('pfTotalVal').style.color=totalPnl>=0?'var(--green)':'var(--red)';
+}
+
+// ── Chart & display ───────────────────────────
+// NOTE: price history is simulated (a plausible path ending at the real current
+// price), since the backend only supplies a live snapshot + 24h change, not a
+// full historical series. Longer ranges assume progressively higher historical
+// peaks (athMult) and wider noise (dropFactor) so the shape stays informative
+// even though the exact path is illustrative rather than real historical data.
+function generatePriceData(s,range){
+  const cfg=RANGE_CFG[range]||RANGE_CFG['1D'];
+  const spanMs=cfg.spanMs(),spanDays=spanMs/86400000;
+  const len=cfg.points;
+  const baseAth=athOf(s);
+  const rangeAth=baseAth*cfg.athMult;
+  const stepMs=spanMs/(len-1);
+  const prices=[],labels=[];
+  for(let i=0;i<len;i++){
+    const t=i/(len-1);
+    const msAgo=(len-1-i)*stepMs;
+    const base=rangeAth+t*(s.price-rangeAth);
+    const noise=(Math.random()-0.5)*s.price*0.007*cfg.dropFactor;
+    prices.push(+(base+noise).toFixed(4));
+    labels.push(labelForSpan(msAgo,spanDays));
+  }
+  prices[prices.length-1]=s.price;
+  return {prices,labels,rangeAth};
+}
+
+// ── Historical data ──────────────────────────
+// v18 uses the same historical series for charts and technical indicators.
+// Crypto: fetched directly from CoinGecko's public market_chart endpoint (CORS-open, no key needed).
+// Stocks: fetched from our own backend at BACKEND/api/history/:symbol?range=X, mirroring the
+// existing BACKEND/api/price/:symbol route. That endpoint doesn't exist yet on the backend —
+// until it's added, stock ranges automatically fall back to the simulated estimate below,
+// and the chart/legend/label are marked "(estimated)" so it's never presented as real data.
+const CG_DAYS = {'1D':1,'1W':7,'1M':30,'3M':90,'6M':180,'1Y':365};
+function daysParamFor(range){ return range==='YTD' ? Math.max(1,Math.round(daysSinceYearStart())) : CG_DAYS[range]; }
+
+async function fetchCoinGeckoSeries(cgId,range){
+  const days=daysParamFor(range);
+  const r=await fetch(`https://api.coingecko.com/api/v3/coins/${cgId}/market_chart?vs_currency=usd&days=${days}`);
+  if(!r.ok) throw new Error('CoinGecko HTTP '+r.status);
+  const d=await r.json();
+  if(!d.prices || !d.prices.length) throw new Error('empty CoinGecko series');
+  return d.prices; // [[timestampMs, price], ...]
+}
+
+async function fetchBackendHistory(symbol,range){
+  const r=await fetch(`${BACKEND}/api/history/${encodeURIComponent(symbol)}?range=${range}`);
+  if(!r.ok) throw new Error('backend history HTTP '+r.status);
+  const d=await r.json();
+  if(!d || !Array.isArray(d.prices) || !d.prices.length) throw new Error('empty backend series');
+  return d.prices; // expected [[timestampMs, price], ...]
+}
+
+function downsample(series,maxPoints){
+  if(series.length<=maxPoints) return series;
+  const step=Math.ceil(series.length/maxPoints);
+  const out=[];
+  for(let i=0;i<series.length;i+=step) out.push(series[i]);
+  const last=series[series.length-1];
+  if(out[out.length-1]!==last) out.push(last);
+  return out;
+}
+
+async function getHistoricalSeries(s,range){
+  const cfg=RANGE_CFG[range]||RANGE_CFG['1D'];
+  const spanDays=cfg.spanMs()/86400000;
+  try{
+    const raw=downsample(s.type==='crypto'?await fetchCoinGeckoSeries(s.cgId,range):await fetchBackendHistory(s.sym,range),cfg.points);
+    const prices=raw.map(p=>p[1]);
+    const labels=raw.map(p=>labelForSpan(Date.now()-p[0],spanDays));
+    if(prices.length) prices[prices.length-1]=s.price; // anchor final point to live price
+    const rangeAth=Math.max(...prices,s.price);
+    return {prices,labels,rangeAth,isReal:true};
+  }catch(e){
+    const sim=generatePriceData(s,range);
+    return {...sim,isReal:false};
+  }
+}
+
+// Why our number could differ from Yahoo Finance's own "52 Week Range":
+// Yahoo's displayed figure comes from intraday high/low ticks (the actual
+// highest and lowest price traded during the day), not just daily closing
+// prices. Our earlier calc only used daily closes pulled from the chart
+// endpoint, which is a narrower range than intraday extremes — so it could
+// legitimately read a bit lower on the high and higher on the low than the
+// number shown on Yahoo's own page. Yahoo's chart API meta object actually
+// exposes the exact fiftyTwoWeekHigh/fiftyTwoWeekLow figures it uses on its
+// own site, so we now fetch and prefer those directly for stocks (see the
+// fiftyTwoWeekHigh/Low fields returned by /api/price, wired into fetchAllPrices).
+// That's an exact match to Yahoo, not an approximation. Crypto has no such
+// authoritative endpoint via CoinGecko, so it still falls back to computing
+// max/min of the real 365-day price series, and if a real series can't be
+// fetched at all, to the simulated 1Y series as a last resort.
+async function getWeek52Stats(s){
+  if(!s||!s.price)return{high:0,low:0,isReal:false};
+  if(s.type!=='crypto' && s.fiftyTwoWeekHigh && s.fiftyTwoWeekLow){
+    return {high:s.fiftyTwoWeekHigh,low:s.fiftyTwoWeekLow,isReal:true};
+  }
+  try{
+    const raw=s.type==='crypto'?await fetchCoinGeckoSeries(s.cgId,'1Y'):await fetchBackendHistory(s.sym,'1Y');
+    const vals=raw.map(p=>p[1]);
+    return {high:Math.max(...vals,s.price),low:Math.min(...vals,s.price),isReal:true};
+  }catch(e){
+    return {...week52Stats(s),isReal:false};
+  }
+}
+
+// ── Market news ────────────────────────────────
+// Backend route (see /api/news/:query) proxies Yahoo Finance's search
+// endpoint, same unofficial-endpoint pattern as /api/price and /api/history.
+// Purely informational — headlines aren't scored or folded into the Buy
+// Score, since automated sentiment is noisy; the point is to give a human
+// the context technicals alone can't: WHY did this thing drop.
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatTimeAgo(ms){
+  if(!ms)return '';
+  const diff=Date.now()-ms;
+  const mins=Math.floor(diff/60000);
+  if(mins<1)return 'just now';
+  if(mins<60)return mins+'m ago';
+  const hrs=Math.floor(mins/60);
+  if(hrs<24)return hrs+'h ago';
+  const days=Math.floor(hrs/24);
+  return days+'d ago';
+}
+async function fetchNews(query){
+  const r=await fetch(`${BACKEND}/api/news/${encodeURIComponent(query)}`);
+  if(!r.ok) throw new Error('news HTTP '+r.status);
+  const d=await r.json();
+  return d.articles||[];
+}
+let newsReqId=0;
+async function updateNews(d){
+  const listEl=document.getElementById('newsList'),updEl=document.getElementById('newsUpdated');
+  if(!listEl||!d||!d.price)return;
+  const myReq=++newsReqId;
+  listEl.innerHTML='<div style="font-family:var(--fm);font-size:12px;color:var(--muted2);padding:8px 0"><span class="spinner"></span> Loading news…</div>';
+  updEl.textContent='';
+  const query=d.type==='crypto'?nameOf(d):d.sym;
+  try{
+    const articles=await fetchNews(query);
+    if(myReq!==newsReqId)return; // superseded by a newer stock selection
+    if(!articles.length){
+      listEl.innerHTML='<div style="font-family:var(--fm);font-size:12px;color:var(--muted2);padding:8px 0">No recent news found for '+escapeHtml(d.sym)+'.</div>';
+      return;
+    }
+    listEl.innerHTML=articles.slice(0,6).map(a=>`
+      <a class="news-item" href="${escapeHtml(a.link)}" target="_blank" rel="noopener noreferrer">
+        <div class="news-headline">${escapeHtml(a.title)}</div>
+        <div class="news-meta"><span class="news-source">${escapeHtml(a.publisher||'Unknown source')}</span><span>${formatTimeAgo(a.publishedAt)}</span></div>
+      </a>`).join('');
+    updEl.textContent='Updated '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+  }catch(e){
+    if(myReq!==newsReqId)return;
+    listEl.innerHTML='<div style="font-family:var(--fm);font-size:12px;color:var(--muted2);padding:8px 0">News unavailable right now.</div>';
+  }
+}
+
+function setRange(range){
+  currentRange=range;
+  document.querySelectorAll('.range-tab').forEach(b=>b.classList.toggle('active',b.dataset.range===range));
+  initChart(activeIdx);
+}
+
+let chartRequestId=0;
+async function initChart(idx){
+  const s=stocks[idx];if(!s||!s.price)return;
+  const myReq=++chartRequestId;
+  const loadingEl=document.getElementById('chartLoading');
+  if(loadingEl)loadingEl.style.display='block';
+  const {prices,labels,rangeAth,isReal}=await getHistoricalSeries(s,currentRange);
+  if(myReq!==chartRequestId)return; // a newer request superseded this one
+  if(loadingEl)loadingEl.style.display='none';
+  const tickerLabelEl=document.getElementById('chartTickerMain');
+  if(tickerLabelEl)tickerLabelEl.textContent=`${s.sym} · ${currentRange} ${isReal?'':'(estimated)'}`;
+  const tickerNameEl=document.getElementById('chartTickerName');
+  if(tickerNameEl)tickerNameEl.textContent=nameOf(s);
+  const priceLegendEl=document.getElementById('priceLegendLabel');
+  if(priceLegendEl)priceLegendEl.textContent=isReal?'Price':'Price (est.)';
+  const ctx=document.getElementById('priceChart').getContext('2d');
+  if(chartInstance)chartInstance.destroy();
+  const ath=rangeAth;
+  const buyLevels=[
+    {pct:10,color:'#d97706'},
+    {pct:20,color:'#0052ff'},
+    {pct:30,color:'#7c3aed'},
+    {pct:40,color:'#e03131'},
+  ];
+  const annotations={};
+  annotations['ath']={
+    type:'line',yMin:ath,yMax:ath,borderColor:'#0f172a',borderWidth:1.5,borderDash:[2,3],
+    label:{display:true,content:`ATH (${currentRange}) → $${ath>10?Math.round(ath).toLocaleString():ath.toFixed(2)}`,
+      position:'end',backgroundColor:'#0f172a',color:'#fff',font:{family:"'Space Mono',monospace",size:11,weight:'bold'},padding:{x:6,y:2},borderRadius:4}
+  };
+  buyLevels.forEach(lv=>{
+    const y=ath*(1-lv.pct/100);
+    annotations['buy'+lv.pct]={
+      type:'line',yMin:y,yMax:y,borderColor:lv.color,borderWidth:1.5,borderDash:[5,4],
+      label:{display:true,content:`-${lv.pct}% → $${y>10?Math.round(y).toLocaleString():y.toFixed(2)}`,
+        position:'start',backgroundColor:lv.color,color:'#fff',font:{family:"'Space Mono',monospace",size:11,weight:'bold'},padding:{x:6,y:2},borderRadius:4}
+    };
+  });
+  const priceFmt=v=>v>10?'$'+Math.round(v).toLocaleString():'$'+v.toFixed(v>1?2:4);
+  const yMax=Math.max(ath,...prices)*1.04;
+  const yMin=Math.min(...prices,ath*(1-40/100))*0.96;
+  chartInstance=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[{data:prices,borderColor:'#e03131',borderWidth:2,pointRadius:0,fill:true,backgroundColor:'rgba(224,49,49,0.06)',tension:0.3}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout:{padding:{left:4,right:88,top:4,bottom:0}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:true,callbacks:{label:c=>priceFmt(c.parsed.y),title:c=>c[0].label}},
+        annotation:{annotations}
+      },
+      scales:{
+        x:{display:true,ticks:{maxTicksLimit:5,font:{family:"'Space Mono',monospace",size:12},color:'#7a849a'},grid:{display:false}},
+        y:{display:true,position:'right',min:yMin,max:yMax,ticks:{font:{family:"'Space Mono',monospace",size:12},color:'#7a849a',callback:v=>priceFmt(v)},grid:{color:'rgba(0,0,0,0.05)'}}
+      },
+      animation:{duration:600}
+    }
+  });
+}
+
+function updateDisplay(d){
+  if(!d||!d.price)return;
+  const pFmt=d.price>10?'$'+d.price.toLocaleString(undefined,{maximumFractionDigits:2}):'$'+d.price.toFixed(4);
+  document.getElementById('currentPrice').textContent=pFmt;
+  document.getElementById('activeTickerLabel').textContent=d.sym;
+  document.getElementById('assetTypeTag').textContent=d.type==='crypto'?'Crypto':'Stock';
+  document.getElementById('activeNameLabel').textContent=hasRealName(d)?nameOf(d):'';
+  updateWeek52(d);
+  updateNews(d);
+  const neg=d.drop>0;
+  document.getElementById('priceChange').className='price-change '+(neg?'change-neg':'change-pos');
+  document.getElementById('priceChange').textContent=`${neg?'▼':'▲'} ${neg?'-':''}${d.drop.toFixed(2)}% 24h`;
+  // CRASH DEPTH is meant to show cumulative drawdown from the 52W high, not
+  // the 24h move (that's what "24H Change" is for) — use the real drawdown
+  // once technicals have loaded, falling back to 24h only while they haven't.
+  const crashPct=Number.isFinite(d.drawdown)?d.drawdown:d.drop;
+  document.getElementById('crashDepth').textContent=crashPct>0?`-${crashPct.toFixed(2)}%`:'flat';
+  document.getElementById('volSpike').textContent=Number.isFinite(d.vol)?d.vol.toFixed(1)+'%':'—';
+  document.getElementById('rsiVal').textContent=d.rsi;
+  document.getElementById('fearVal').textContent=d.fear;
+  document.getElementById('dropPct').textContent=d.drop>0?`-${d.drop.toFixed(2)}%`:'flat';
+  document.getElementById('sourceTag').innerHTML=`<span class="source-tag ${d.isLive?'source-live':'source-sim'}">${d.isLive?(d.type==='stock'?'● LIVE (Render)':'● LIVE (CoinGecko)'):'◌ EST'}</span>`;
+  document.getElementById('lastUpdated').textContent=d.isLive?`Updated: ${new Date().toLocaleTimeString()}`:'';
+  const score=calcScore(d);
+  document.getElementById('buyScore').textContent=score==null?'—':score;
+  const rsiS=d.rsiScore, ddS=d.drawdownScore, volS=d.volScore, fgS=d.fearScore, supS=d.supportScore;
+  setBar('rsi',rsiS,rsiS==null?'var(--muted)':rsiS>60?'var(--green)':'var(--amber)');
+  setBar('dd',ddS,ddS==null?'var(--muted)':ddS>50?'var(--green)':'var(--amber)');
+  setBar('vol',volS,volS==null?'var(--muted)':volS>50?'var(--green)':'var(--amber)');
+  setBar('fg',fgS,fgS==null?'var(--muted)':fgS>50?'var(--green)':'var(--amber)');
+  setBar('sup',supS,supS==null?'var(--muted)':supS>60?'var(--green)':'var(--amber)');
+  const badge=document.getElementById('recBadge');
+  if(score==null){badge.textContent='DATA INCOMPLETE';badge.className='rec-badge rec-wait';}
+  else if(score>=70){badge.textContent='STRONG BUY ZONE';badge.className='rec-badge rec-strong';}
+  else if(score>=45){badge.textContent='WATCH & WAIT';badge.className='rec-badge rec-wait';}
+  else{badge.textContent='AVOID / TOO EARLY';badge.className='rec-badge rec-avoid';}
+  buildThresholdGrid();updateTranches(d);
+}
+
+function setBar(id,val,color){
+  const bar=document.getElementById('bar-'+id);
+  const score=document.getElementById('sc-'+id);
+  const safe=Number.isFinite(val)?clamp(val):0;
+  bar.style.cssText=`width:${safe}%;background:${color}`;
+  score.style.color=color;
+  score.textContent=Number.isFinite(val)?Math.round(val):'—';
+}
+
+function updateTranches(s){
+  const price=s.price;
+  // Same fix as the threshold grid: measure "how far has it actually fallen"
+  // using real cumulative drawdown from the 52W high, not the 24h change —
+  // otherwise a tranche the price already fell through can get stuck showing
+  // WAITING just because today happened to be flat.
+  const drop=Number.isFinite(s.drawdown)?s.drawdown:s.drop;
+  const n=parseInt(document.getElementById('trancheSlider').value);
+  const cap=parseInt(document.getElementById('capitalSlider').value);
+  const trigger=Math.abs(selectedThreshold);
+  const list=document.getElementById('trancheList');list.innerHTML='';
+  const weights=n===2?[40,60]:n===3?[25,35,40]:n===4?[20,25,30,25]:[15,20,25,25,15];
+  const intervals=n===2?[0,5]:n===3?[0,5,10]:n===4?[0,4,8,12]:[0,3,6,10,15];
+  // Anchor tranches to the 52-week high (a stable, real reference) instead of
+  // a 24h-drop-derived pseudo-ATH, which shifts every day and would make the
+  // tranche ladder chase the price down rather than measure a fixed drawdown.
+  const ath=(s.fiftyTwoWeekHigh)||(price/(1-Math.max(drop,0.5)/100));
+  for(let i=0;i<n;i++){
+    const dropAt=trigger+intervals[i];
+    const buyPrice=ath*(1-dropAt/100);
+    const bpFmt=buyPrice>10?'$'+Math.round(buyPrice).toLocaleString():'$'+buyPrice.toFixed(4);
+    const alloc=Math.round(cap*weights[i]/100);
+    const isReady=drop>=dropAt,isFired=drop>=dropAt+3;
+    const el=document.createElement('div');el.className='tranche';
+    el.innerHTML=`<div class="tranche-num">#${i+1}</div><div class="tranche-trigger">-${dropAt}% → ${bpFmt}</div><div class="tranche-alloc">$${alloc.toLocaleString()}</div><div class="tranche-status ${isFired?'status-done':isReady?'status-ready':'status-wait'}">${isFired?'FIRED':isReady?'READY':'WAITING'}</div>`;
+    list.appendChild(el);
+  }
+}
+
+function updateParams(){
+  document.getElementById('capitalVal').textContent='$'+parseInt(document.getElementById('capitalSlider').value).toLocaleString();
+  document.getElementById('trancheVal').textContent=document.getElementById('trancheSlider').value;
+  document.getElementById('stopVal').textContent='-'+document.getElementById('stopSlider').value+'%';
+  const d=stocks[activeIdx];if(d&&d.price)updateTranches(d);
+  scheduleSettingsSave();
+}
+
+async function executeBuy(){
+  const d=stocks[activeIdx];if(!d||!d.price){addLog('alert','⚠ Prices not loaded.');return;}
+  const cap=parseInt(document.getElementById('capitalSlider').value);
+  const n=parseInt(document.getElementById('trancheSlider').value);
+  addLog('buy',`✔ Plan: ${n} tranches, $${cap.toLocaleString()} on ${d.sym}`);
+  const email=document.getElementById('emailPrimary').value;
+  const cc=document.getElementById('emailCC').value;
+  if(email&&document.getElementById('tog2').checked){
+    try{await fetch(`${BACKEND}/api/alert`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:email,cc,symbol:d.sym,price:d.price.toFixed(2),score:calcScore(d),threshold:selectedThreshold+'%'})});addLog('email',`📧 Alert → ${email}`);}
+    catch{addLog('alert','⚠ Email failed');}
+  }
+  const phone=document.getElementById('smsPhone').value;
+  if(phone&&document.getElementById('tog4').checked){
+    try{await fetch(`${BACKEND}/api/sms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:phone,symbol:d.sym,price:d.price.toFixed(2),score:calcScore(d),threshold:selectedThreshold+'%'})});addLog('sms',`📱 SMS → ${phone}`);}
+    catch{addLog('alert','⚠ SMS failed');}
+  }
+}
+
+// Deterministic synthetic inputs for the "Simulate Drop" demo button only —
+// NOT real technical analysis. Fed through the same scoreRSI/scoreDrawdown/
+// scoreFear/scoreVolatility/scoreSupportTrend functions used for live data,
+// so the demo's Buy Score and signal bars actually move with the simulated
+// drop instead of staying frozen at whatever the last real values were.
+function simulatedTechnicalsForDrop(newDrop,currentFear){
+  const rsi=Math.max(15,55-newDrop*0.9);
+  const vol=12+newDrop*0.9;
+  const drawdown=newDrop;
+  const fear=Math.min(95,(currentFear||50)+newDrop*0.6);
+  const rangePosition=Math.min(100,newDrop*2.2); // deeper simulated drop = closer to the low
+  return {
+    rsi:+rsi.toFixed(1), vol:+vol.toFixed(1), drawdown, fear:Math.round(fear),
+    rsiScore:scoreRSI(rsi), drawdownScore:scoreDrawdown(drawdown),
+    fearScore:scoreFear(fear), volScore:scoreVolatility(vol),
+    supportScore:scoreSupportTrend({rangePosition,ma50Distance:null,recentLowDistance:null}),
+    technicalSource:'simulated'
+  };
+}
+
+function simulateDrop(){
+  const drops=[12,18,25,31,38,44];
+  simulationStep=(simulationStep+1)%drops.length;
+  const d=stocks[activeIdx];if(!d||!d.price){addLog('alert','⚠ Load prices first.');return;}
+  const newDrop=drops[simulationStep];
+  const ath=d.price/(1-Math.max(d.drop,0.5)/100);
+  const newPrice=+(ath*(1-newDrop/100)).toFixed(4);
+  const sim=simulatedTechnicalsForDrop(newDrop,d.fear);
+  stocks[activeIdx]={...d,price:newPrice,drop:newDrop,isLive:false,
+    rsi:sim.rsi,vol:sim.vol,drawdown:sim.drawdown,fear:sim.fear,
+    rsiScore:sim.rsiScore,drawdownScore:sim.drawdownScore,fearScore:sim.fearScore,
+    volScore:sim.volScore,supportScore:sim.supportScore,technicalSource:sim.technicalSource};
+  updateDisplay(stocks[activeIdx]);initChart(activeIdx);buildStockGrid();updatePortfolio();
+  addLog('alert',`⚠ Simulated -${newDrop}%`);
+}
+
+async function testEmail(){
+  const email=document.getElementById('emailPrimary').value;
+  const b=document.getElementById('alertBanner');
+  if(!email){b.textContent='⚠ Enter email first.';b.className='alert-banner show warn';setTimeout(()=>b.classList.remove('show'),3000);return;}
+  try{
+    const r=await fetch(`${BACKEND}/api/alert`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:email,subject:'CrashBuy Pro — Test Email',symbol:'TEST',price:'0.00',score:0,threshold:'N/A'})});
+    const d=await r.json();
+    if(d.sent){b.textContent=`✔ Test email sent to ${email}!`;b.className='alert-banner show ok';addLog('email',`📧 Test sent → ${email}`);}
+    else{b.textContent='⚠ Backend error — check SMTP vars on Render.';b.className='alert-banner show warn';}
+  }catch{b.textContent='⚠ Backend unreachable.';b.className='alert-banner show warn';}
+  setTimeout(()=>b.classList.remove('show'),5000);
+}
+
+async function testSMS(){
+  const phone=document.getElementById('smsPhone').value;
+  const b=document.getElementById('alertBanner');
+  if(!phone){b.textContent='⚠ Enter phone number first.';b.className='alert-banner show warn';setTimeout(()=>b.classList.remove('show'),3000);return;}
+  try{
+    const r=await fetch(`${BACKEND}/api/sms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:phone,symbol:'TEST',price:'0.00',score:0,threshold:'N/A'})});
+    const d=await r.json();
+    if(d.sent){b.textContent=`✔ Test SMS sent to ${phone}!`;b.className='alert-banner show ok';addLog('sms',`📱 Test SMS → ${phone}`);}
+    else{b.textContent=`⚠ Twilio error: ${JSON.stringify(d.detail||d.error)}`;b.className='alert-banner show warn';}
+  }catch{b.textContent='⚠ SMS endpoint failed.';b.className='alert-banner show warn';}
+  setTimeout(()=>b.classList.remove('show'),5000);
+}
+
+function addLog(type,msg){
+  const list=document.getElementById('logList');
+  const el=document.createElement('div');el.className='log-entry';
+  el.innerHTML=`<span class="log-time">${new Date().toLocaleTimeString()}</span><span class="log-msg ${type}">${msg}</span>`;
+  list.insertBefore(el,list.firstChild);
+  while(list.children.length>40)list.removeChild(list.lastChild);
+}
+function clearLog(){document.getElementById('logList').innerHTML='';}
+
+buildNotifThresholds();
+init();
+setInterval(fetchAllPrices,60000);
+</script>
