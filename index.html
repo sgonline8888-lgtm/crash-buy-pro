@@ -394,6 +394,19 @@ input[type=range]{flex:2;accent-color:var(--accent)}
 </div>
 <div class="save-toast" id="toast"></div>
 
+<script>
+// Diagnostic: surface any script error on the page instead of hanging silently on "Loading..."
+window.addEventListener('error', function(e){
+  var b=document.getElementById('liveBanner'); if(!b) return;
+  b.className='live-banner show error';
+  b.textContent='Script error: '+(e.message||'unknown')+' (line '+(e.lineno||'?')+')';
+});
+window.addEventListener('unhandledrejection', function(e){
+  var b=document.getElementById('liveBanner'); if(!b) return;
+  b.className='live-banner show error';
+  b.textContent='Error: '+((e.reason&&e.reason.message)||e.reason);
+});
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 const BACKEND = 'https://crashbuy-backend.onrender.com';
@@ -809,7 +822,7 @@ function buildStockGrid() {
     const dayRangeHtml  = (s.dayLow && s.dayHigh) ? `<span>Day Range <b>${fmtPrice(s.dayLow)} – ${fmtPrice(s.dayHigh)}</b></span>` : '';
     const wkRangeHtml   = (s.atl && s.ath) ? `<span>52W Range <b>${fmtPrice(s.atl)} – ${fmtPrice(s.ath)}</b></span>` : '';
     const yieldHtml     = s.dividendYield ? `<span>Yield <b>${(s.dividendYield*100).toFixed(2)}%</b></span>` : '';
-    const expHtml       = (s.quoteType==='ETF' && s.expenseRatio!=null) ? `<span style="color:var(--purple)">Expense Ratio <b>${(s.expenseRatio*100).toFixed(3)}%</b></span>` : '';
+    const expHtml       = (s.quoteType==='ETF') ? `<span style="color:var(--purple)">Expense Ratio <b>${s.expenseRatio!=null?(s.expenseRatio*100).toFixed(2)+'%':'N/A'}</b></span>` : '';
     const statsRow      = [prevCloseHtml, dayRangeHtml, wkRangeHtml, yieldHtml, expHtml].filter(Boolean).join('');
 
     const card=document.createElement('div');
