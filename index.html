@@ -492,9 +492,9 @@ async function fetchAllPrices() {
           const vol = +(1 + Math.abs(c)/5).toFixed(1);
           const rsi = c<-5?25:c<-2?33:c<0?40:52;
           stocks[i] = {...s, price:d.price, change24:c, drop, ath, atl, athDrop, vol,
-            prevClose:d.prevClose||null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
+            prevClose:d.previousClose??d.prevClose??null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
             quoteType:d.quoteType||'EQUITY',
-            dividendYield:d.dividendYield||null, expenseRatio:d.expenseRatio||null,
+            dividendYield:d.dividendYield??null, expenseRatio:d.expenseRatio??null,
             rsi:+(rsi+Math.random()*4).toFixed(1), fear:fearGreed,
             longName:d.name||d.label||d.longName||s.longName||s.label||'', isLive:true};
           live++;
@@ -551,11 +551,11 @@ async function loadWatchlist() {
   }
 }
 async function loadPortfolio() {
-  try { const r=await fetch(`${BACKEND}/api/portfolio`); const d=await r.json(); portfolio=d.portfolio||[]; } catch {}
+  try { const d=await fetchWithTimeout(`${BACKEND}/api/portfolio`, 35000); portfolio=d.portfolio||[]; } catch {}
 }
 async function loadSettings() {
   try {
-    const r=await fetch(`${BACKEND}/api/settings`); const d=await r.json();
+    const d=await fetchWithTimeout(`${BACKEND}/api/settings`, 35000);
     if(d.email) document.getElementById('emailPrimary').value=d.email;
     if(d.emailCC) document.getElementById('emailCC').value=d.emailCC;
     if(d.phone) document.getElementById('smsPhone').value=d.phone;
@@ -632,7 +632,7 @@ function initChart(idx) {
         tooltip:{
           enabled:true,
           callbacks:{
-            label: ctx => ctx.dataset.label===''52W High'' ? `52W High: ${fmtPrice(ctx.raw)}` : `Price: ${fmtPrice(ctx.raw)}`
+            label: ctx => ctx.dataset.label==='52W High' ? `52W High: ${fmtPrice(ctx.raw)}` : `Price: ${fmtPrice(ctx.raw)}`
           }
         }
       },
@@ -871,7 +871,7 @@ async function addStock() {
         if(pd&&pd.usd){const c=pd.usd_24h_change||0;ns={...ns,price:pd.usd,change24:c,drop:c<0?+Math.abs(c).toFixed(2):0,vol:+(1+Math.abs(c)/5).toFixed(1),isLive:true};}
       } else {
         const pd=await fetchStock(sym);
-        if(pd&&pd.price){const c=pd.changePct||0;const ath=pd.fiftyTwoWeekHigh||0;const ad=ath>0?+(((ath-pd.price)/ath)*100).toFixed(1):0;ns={...ns,price:pd.price,change24:c,drop:c<0?+Math.abs(c).toFixed(2):0,ath,athDrop:ad,vol:+(1+Math.abs(c)/5).toFixed(1),longName:pd.longName||'',isLive:true};}
+        if(pd&&pd.price){const c=pd.changePct||0;const ath=pd.fiftyTwoWeekHigh||0;const ad=ath>0?+(((ath-pd.price)/ath)*100).toFixed(1):0;ns={...ns,price:pd.price,change24:c,drop:c<0?+Math.abs(c).toFixed(2):0,ath,atl:pd.fiftyTwoWeekLow||0,athDrop:ad,vol:+(1+Math.abs(c)/5).toFixed(1),prevClose:pd.previousClose??pd.prevClose??null,dayHigh:pd.dayHigh??null,dayLow:pd.dayLow??null,quoteType:pd.quoteType||'EQUITY',dividendYield:pd.dividendYield??null,expenseRatio:pd.expenseRatio??null,longName:pd.name||pd.longName||'',isLive:true};}
       }
     } catch {}
     stocks.push(ns);
@@ -995,6 +995,7 @@ async function init() {
   setBanner('warn','Loading watchlist from backend...');
   buildNotifThresholds();
   await Promise.all([loadWatchlist(), loadPortfolio(), loadSettings()]);
+  buildStockGrid();
   await fetchAllPrices();
 }
 
