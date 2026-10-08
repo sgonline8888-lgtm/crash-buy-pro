@@ -78,6 +78,17 @@ canvas#priceChart{width:100%!important;height:100%!important}
 .chart-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:12px;color:var(--muted);pointer-events:none}
 .tranche-ref{font-family:var(--fm);font-size:11px;color:var(--muted);margin-bottom:8px}
 .tranche-ref b{color:var(--text)}
+.tranche.tranche-alert{border-color:var(--accent);background:var(--accent-dim)}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.stat-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-family:var(--fm);font-size:12px;color:var(--muted)}
+.stat-row b{color:var(--text);font-weight:700;text-align:right}
+@media(max-width:560px){.stats-grid{grid-template-columns:1fr}}
+.news-item{display:block;padding:10px 0;border-bottom:1px solid var(--border);text-decoration:none;color:inherit}
+.news-item:last-child{border-bottom:none}
+.news-title{font-size:13px;font-weight:600;line-height:1.35;color:var(--text)}
+.news-item:hover .news-title{color:var(--accent)}
+.news-meta{font-family:var(--fm);font-size:10px;color:var(--muted);margin-top:4px}
+.news-empty{font-family:var(--fm);font-size:12px;color:var(--muted);padding:6px 0}
 
 /* ATH LINE INFO */
 .ath-info{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:9px;padding:10px 14px;margin-top:12px;border:1px solid var(--border)}
@@ -221,6 +232,9 @@ input[type=range]{flex:2;accent-color:var(--accent)}
 .wb-outline:hover{background:var(--accent);color:#fff}
 .wb-purple{border-color:var(--purple);color:var(--purple)}
 .wb-purple:hover{background:var(--purple);color:#fff}
+.auto-status{font-family:var(--fm);font-size:11px;line-height:1.5;color:var(--muted);margin-top:10px;padding:9px 11px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
+.auto-status b{color:var(--text)}
+.auto-status .warn{color:var(--amber);font-weight:700}
 .alert-banner{display:none;border-radius:9px;padding:10px 14px;font-family:var(--fm);font-size:12px;font-weight:700;margin-top:8px}
 .alert-banner.show{display:block}
 .ab-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,168,107,0.25)}
@@ -302,6 +316,16 @@ input[type=range]{flex:2;accent-color:var(--accent)}
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-title">Key Statistics</div>
+      <div class="stats-grid" id="keyStats"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Market News · <span id="newsSym">—</span></div>
+      <div id="newsList"><div class="news-empty">Loading news…</div></div>
+    </div>
+
     <div class="metrics-grid">
       <div class="metric-card"><div class="metric-label">RSI</div><div class="metric-value mv-amber" id="rsiVal">—</div></div>
       <div class="metric-card"><div class="metric-label">Fear Index</div><div class="metric-value mv-red" id="fearVal">—</div></div>
@@ -310,7 +334,7 @@ input[type=range]{flex:2;accent-color:var(--accent)}
     </div>
 
     <div class="card">
-      <div class="card-title">Drop Thresholds — tap to set trigger</div>
+      <div class="card-title">Drop Thresholds (from 52W high) — tap to set alert</div>
       <div class="threshold-grid" id="thresholdGrid"></div>
     </div>
 
@@ -400,12 +424,18 @@ input[type=range]{flex:2;accent-color:var(--accent)}
       <div class="form-row"><div class="form-label">SMS Phone</div><input class="form-input" type="tel" id="smsPhone" placeholder="+6591234567" oninput="schedSave()"></div>
     </div>
     <div class="card">
-      <div class="card-title">Alert Thresholds</div>
+      <div class="card-title">Automatic Alerts</div>
+      <div class="tog-row"><div><div class="tog-label">Email me automatically</div><div class="tog-sub">The server checks every few minutes — works with this page closed</div></div><label class="toggle"><input type="checkbox" id="togAuto" checked onchange="schedSave();setTimeout(loadAlertStatus,2200)"><div class="tog-slider"></div></label></div>
+      <div class="auto-status" id="autoStatus">Checking status…</div>
+      <button class="wide-btn wb-outline" onclick="checkAlertsNow()">CHECK ALERTS NOW ↗</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Alert Thresholds — % below 52W high</div>
       <div class="cb-grid" id="notifThresholds"></div>
       <div class="tog-row"><div><div class="tog-label">Buy Signal Alert</div><div class="tog-sub">Score ≥ 70</div></div><label class="toggle"><input type="checkbox" id="tog1" checked onchange="schedSave()"><div class="tog-slider"></div></label></div>
-      <div class="tog-row"><div><div class="tog-label">Tranche Trigger</div><div class="tog-sub">When tranche fires</div></div><label class="toggle"><input type="checkbox" id="tog2" checked onchange="schedSave()"><div class="tog-slider"></div></label></div>
+      <div class="tog-row"><div><div class="tog-label">Tranche Trigger</div><div class="tog-sub">When a tranche level (-10…-50%) is reached</div></div><label class="toggle"><input type="checkbox" id="tog2" checked onchange="schedSave()"><div class="tog-slider"></div></label></div>
       <div class="tog-row"><div><div class="tog-label">Stop-Loss Warning</div><div class="tog-sub">Price hits stop-loss</div></div><label class="toggle"><input type="checkbox" id="tog3" checked onchange="schedSave()"><div class="tog-slider"></div></label></div>
-      <div class="tog-row"><div><div class="tog-label">SMS on Tranche Fire</div><div class="tog-sub">Also send SMS</div></div><label class="toggle"><input type="checkbox" id="tog4" onchange="schedSave()"><div class="tog-slider"></div></label></div>
+      <div class="tog-row"><div><div class="tog-label">SMS on Tranche Fire</div><div class="tog-sub">Also text me (needs phone + Twilio)</div></div><label class="toggle"><input type="checkbox" id="tog4" onchange="schedSave()"><div class="tog-slider"></div></label></div>
     </div>
     <button class="wide-btn wb-outline" onclick="testEmail()">SEND TEST EMAIL ↗</button>
     <button class="wide-btn wb-outline wb-purple" onclick="testSMS()" style="margin-top:6px">SEND TEST SMS ↗</button>
@@ -457,6 +487,19 @@ function fmtPrice(p) {
   if (p >= 1000) return '$' + p.toLocaleString(undefined,{maximumFractionDigits:2});
   if (p >= 1) return '$' + p.toFixed(2);
   return '$' + p.toFixed(4);
+}
+function fmtBig(n) {
+  if (n==null || isNaN(n)) return '—';
+  const a=Math.abs(n);
+  for (const [v,l] of [[1e12,'T'],[1e9,'B'],[1e6,'M'],[1e3,'K']]) if (a>=v) return (n/v).toFixed(2)+l;
+  return Math.round(n).toLocaleString();
+}
+function esc(t) { return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function timeAgo(ms) {
+  const m=Math.max(0,Math.round((Date.now()-ms)/60000));
+  if (m<60) return Math.max(1,m)+'m ago';
+  if (m<1440) return Math.round(m/60)+'h ago';
+  return Math.round(m/1440)+'d ago';
 }
 function calcScore(d) {
   if (!d || !d.price) return 0;
@@ -516,6 +559,64 @@ async function fetchFearGreed() {
   try { const d = await fetchWithTimeout('https://api.alternative.me/fng/?limit=1', 8000); return parseInt(d.data[0].value); } catch { return 50; }
 }
 
+// Batched CoinGecko data (price, 24h range, 24h volume, market cap, ticker) via the backend
+async function fetchCryptoMarkets(ids) {
+  ids=[...new Set((ids||[]).filter(Boolean))];
+  if(!ids.length) return {};
+  try { return (await fetchWithTimeout(`${BACKEND}/api/crypto/markets?ids=${encodeURIComponent(ids.join(','))}`,15000)) || {}; }
+  catch { return {}; }
+}
+
+// One refresh path for stocks, ETFs and crypto — every asset gets the same metrics
+async function refreshStock(s, i, cgMap) {
+  if (s.type === 'stock') {
+    const d = await fetchStock(s.sym);
+    if (!(d && d.price)) return false;
+    const c = d.changePct || 0;
+    const drop = c < 0 ? +Math.abs(c).toFixed(2) : 0;
+    const ath = d.fiftyTwoWeekHigh || 0, atl = d.fiftyTwoWeekLow || 0;
+    const athDrop = ath > 0 ? +(((ath - d.price) / ath) * 100).toFixed(1) : 0;
+    const vol = +(1 + Math.abs(c)/5).toFixed(1);
+    const rsi = c<-5?25:c<-2?33:c<0?40:52;
+    stocks[i] = {...s, price:d.price, change24:c, drop, ath, atl, athDrop, vol,
+      prevClose:d.previousClose??d.prevClose??null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
+      volume:d.volume??null, avgVolume:d.avgVolume??null, marketCap:d.marketCap??null, netAssets:d.netAssets??null,
+      quoteType:d.quoteType||'EQUITY',
+      dividendYield:d.dividendYield??null, expenseRatio:d.expenseRatio??null,
+      rsi:+(rsi+Math.random()*4).toFixed(1), fear:fearGreed,
+      longName:d.name||d.label||d.longName||s.longName||s.label||'', isLive:true};
+    return true;
+  }
+
+  // Crypto: CoinGecko for live price / 24h range / volume / market cap, Yahoo (BTC-USD style) for 52W range + prev close
+  const cg = (cgMap && cgMap[s.cgId]) || null;
+  const ySym = cg && cg.symbol ? cg.symbol.toUpperCase()+'-USD' : chartSymbol(s);
+  let y = null;
+  try { y = await fetchStock(ySym); } catch {}
+  let price = cg && cg.current_price!=null ? cg.current_price : (y && y.price) || null;
+  let c = cg && cg.price_change_percentage_24h!=null ? cg.price_change_percentage_24h : (y ? y.changePct : null);
+  if (price == null) {                                   // last resort: the old direct CoinGecko call
+    const d = await fetchCrypto(s.cgId);
+    if (d && d.usd) { price = d.usd; c = d.usd_24h_change || 0; }
+  }
+  if (price == null) return false;
+  c = c || 0;
+  const drop = c < 0 ? +Math.abs(c).toFixed(2) : 0;
+  const ath = (y && y.fiftyTwoWeekHigh) || s.ath || 0, atl = (y && y.fiftyTwoWeekLow) || 0;
+  const athDrop = ath > 0 ? +(((ath - price) / ath) * 100).toFixed(1) : 0;
+  const vol = +(1 + Math.abs(c)/5).toFixed(1);
+  const rsi = c<-10?22:c<-5?30:c<0?38:50;
+  stocks[i] = {...s, ySym, price, change24:c, drop, ath, atl, athDrop, vol,
+    prevClose: y ? (y.previousClose??y.prevClose??null) : null,
+    dayHigh:(cg&&cg.high_24h)??(y&&y.dayHigh)??null, dayLow:(cg&&cg.low_24h)??(y&&y.dayLow)??null,
+    volume:(cg&&cg.total_volume)??(y&&y.volume)??null, avgVolume:null,
+    marketCap:(cg&&cg.market_cap)??(y&&y.marketCap)??null, netAssets:null,
+    quoteType:'CRYPTOCURRENCY', dividendYield:null, expenseRatio:null,
+    rsi:+(rsi+Math.random()*5).toFixed(1), fear:fearGreed,
+    longName:(cg&&cg.name)||s.longName||'', isLive:true};
+  return true;
+}
+
 async function fetchAllPrices() {
   setStatus('loading','UPDATING...');
   setBanner('warn','Fetching live prices...');
@@ -523,40 +624,11 @@ async function fetchAllPrices() {
   let live = 0;
 
   // Fetch ALL stocks and cryptos in parallel — much faster than sequential
+  const cgP = fetchCryptoMarkets(stocks.filter(s => s.type !== 'stock').map(s => s.cgId));
   await Promise.all(stocks.map(async (s, i) => {
     try {
-      if (s.type === 'stock') {
-        const d = await fetchStock(s.sym);
-        if (d && d.price) {
-          const c = d.changePct || 0;
-          const drop = c < 0 ? +Math.abs(c).toFixed(2) : 0;
-          const ath = d.fiftyTwoWeekHigh || 0;
-          const atl = d.fiftyTwoWeekLow  || 0;
-          const athDrop = ath > 0 ? +(((ath - d.price) / ath) * 100).toFixed(1) : 0;
-          const vol = +(1 + Math.abs(c)/5).toFixed(1);
-          const rsi = c<-5?25:c<-2?33:c<0?40:52;
-          stocks[i] = {...s, price:d.price, change24:c, drop, ath, atl, athDrop, vol,
-            prevClose:d.previousClose??d.prevClose??null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
-            quoteType:d.quoteType||'EQUITY',
-            dividendYield:d.dividendYield??null, expenseRatio:d.expenseRatio??null,
-            rsi:+(rsi+Math.random()*4).toFixed(1), fear:fearGreed,
-            longName:d.name||d.label||d.longName||s.longName||s.label||'', isLive:true};
-          live++;
-        }
-      } else {
-        const d = await fetchCrypto(s.cgId);
-        if (d && d.usd) {
-          const c = d.usd_24h_change || 0;
-          const drop = c < 0 ? +Math.abs(c).toFixed(2) : 0;
-          const ath = s.ath || 0;
-          const athDrop = ath > 0 ? +(((ath - d.usd) / ath) * 100).toFixed(1) : 0;
-          const vol = +(1 + Math.abs(c)/5).toFixed(1);
-          const rsi = c<-10?22:c<-5?30:c<0?38:50;
-          stocks[i] = {...s, price:d.usd, change24:c, drop, athDrop, vol,
-            rsi:+(rsi+Math.random()*5).toFixed(1), fear:fearGreed, isLive:true};
-          live++;
-        }
-      }
+      const cgMap = s.type === 'stock' ? null : await cgP;
+      if (await refreshStock(s, i, cgMap)) live++;
     } catch(e) { addLog('alert', `⚠ Failed: ${s.sym} — ${e.message}`); }
   }));
 
@@ -607,6 +679,8 @@ async function loadSettings() {
     if(d.tog2!==undefined) document.getElementById('tog2').checked=d.tog2;
     if(d.tog3!==undefined) document.getElementById('tog3').checked=d.tog3;
     if(d.tog4!==undefined) document.getElementById('tog4').checked=d.tog4;
+    if(d.autoAlerts!==undefined) document.getElementById('togAuto').checked=d.autoAlerts;
+    if(Array.isArray(d.alertLevels)&&d.alertLevels.length) buildNotifThresholds(d.alertLevels);
     if(d.threshold) selThreshold=d.threshold;
     if(d.capital) document.getElementById('capitalSlider').value=d.capital;
     if(d.stopLoss) document.getElementById('stopSlider').value=d.stopLoss;
@@ -624,6 +698,8 @@ async function saveSettings() {
         tog2:document.getElementById('tog2').checked,
         tog3:document.getElementById('tog3').checked,
         tog4:document.getElementById('tog4').checked,
+        autoAlerts:document.getElementById('togAuto').checked,
+        alertLevels:[...document.querySelectorAll('#notifThresholds input:checked')].map(i=>+i.dataset.lv),
         threshold:selThreshold,
         capital:document.getElementById('capitalSlider').value,
         tranches:document.getElementById('trancheSlider').value,
@@ -658,7 +734,7 @@ function buildRangeTabs(){
     box.appendChild(b);
   });
 }
-function chartSymbol(s){ return s.type==='crypto' ? s.sym.replace('/','-') : s.sym; }
+function chartSymbol(s){ return s.type==='crypto' ? (s.ySym || s.sym.replace('/','-')) : s.sym; }
 function setChartMsg(t){ const m=document.getElementById('chartMsg'); if(m) m.textContent=t||''; }
 function fmtAxis(v){ return v>=1000 ? v.toLocaleString(undefined,{maximumFractionDigits:0}) : v>=1 ? v.toFixed(2) : v.toFixed(4); }
 function fmtTick(ts){
@@ -688,16 +764,16 @@ async function initChart(idx) {
     try{
       const d=await fetchWithTimeout(`${BACKEND}/api/history/${encodeURIComponent(chartSymbol(s))}?range=${chartRange}`,35000);
       if(!d.prices||!d.prices.length) throw new Error('empty');
-      hist=histCache[key]={at:Date.now(),prices:d.prices};
+      hist=histCache[key]={at:Date.now(),prices:d.prices,volumes:d.volumes||[]};
     }catch(e){
       if(!hist){ if(token===chartToken){ if(chartInst){chartInst.destroy();chartInst=null;} setChartMsg('Chart unavailable for this symbol'); document.getElementById('rangeChg').textContent=''; } return; }
     }
   }
   if(token!==chartToken) return;
-  drawChart(s,hist.prices);
+  drawChart(s,hist.prices,hist.volumes);
 }
 
-function drawChart(s,pts){
+function drawChart(s,pts,volumes){
   setChartMsg('');
   const ctx=document.getElementById('priceChart').getContext('2d');
   if(chartInst) chartInst.destroy();
@@ -711,13 +787,16 @@ function drawChart(s,pts){
   const rc=document.getElementById('rangeChg');
   rc.textContent=`${chg>=0?'+':''}${chg.toFixed(2)}%`; rc.style.color=up?'var(--green)':'var(--red)';
 
-  const datasets=[{label:'Price',data,borderColor:col,borderWidth:1.8,pointRadius:0,pointHoverRadius:4,
+  const vols=(volumes&&volumes.length===data.length)?volumes:[]; const maxV=vols.length?Math.max(0,...vols):0;
+  const datasets=[{label:'Price',data,borderColor:col,borderWidth:1.8,pointRadius:0,pointHoverRadius:4,order:0,
     pointHoverBackgroundColor:col,fill:true,backgroundColor:grad,tension:0.15}];
   if(chartRange==='1D' && s.prevClose) datasets.push({label:'Prev close',data:Array(data.length).fill(s.prevClose),
     borderColor:'rgba(120,130,150,0.7)',borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false});
   if(['6M','YTD','1Y','5Y'].includes(chartRange) && s.ath>0) datasets.push({label:'52W High',data:Array(data.length).fill(s.ath),
     borderColor:'rgba(0,82,255,0.55)',borderWidth:1.2,borderDash:[5,4],pointRadius:0,fill:false});
 
+  if(maxV>0) datasets.push({type:'bar',label:'Volume',data:vols,yAxisID:'yv',order:2,borderWidth:0,barPercentage:1,categoryPercentage:1,
+    backgroundColor:up?'rgba(0,168,107,0.28)':'rgba(224,49,49,0.25)'});
   const mono='ui-monospace, SFMono-Regular, Menlo, monospace';
   chartInst=new Chart(ctx,{
     type:'line', data:{labels,datasets}, plugins:[crosshairPlugin],
@@ -733,13 +812,14 @@ function drawChart(s,pts){
               return INTRADAY.includes(chartRange)
                 ? d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
                 : d.toLocaleDateString([], {year:'numeric',month:'short',day:'numeric'});},
-            label:c=>fmtPrice(c.raw)
+            label:c=>{const v=vols[c.dataIndex]; return v?[fmtPrice(c.raw),'Vol '+fmtBig(v)]:fmtPrice(c.raw);}
           }}
       },
       scales:{
         x:{grid:{display:false},border:{display:false},
           ticks:{maxTicksLimit:5,maxRotation:0,autoSkip:true,color:'#8a93a6',font:{size:10,family:mono},
             callback:function(v){return fmtTick(this.getLabelForValue(v));}}},
+        yv:{display:false,position:'left',min:0,max:(maxV||1)*4,grid:{display:false}},
         y:{position:'right',grace:'5%',grid:{color:'rgba(100,110,130,0.12)'},border:{display:false},
           ticks:{maxTicksLimit:6,color:'#8a93a6',font:{size:10,family:mono},callback:v=>fmtAxis(v)}}
       }
@@ -811,6 +891,46 @@ function updateDisplay(d) {
 
   buildThresholdGrid();
   updateTranches(d.price, d.drop);
+  renderKeyStats(d);
+  loadNews(d);
+}
+
+function renderKeyStats(d) {
+  const box=document.getElementById('keyStats'); if(!box) return;
+  const crypto=d.type==='crypto', etf=d.quoteType==='ETF';
+  const money=v=>v?'$'+fmtBig(v):'—';
+  const rows=[
+    ['Previous Close', d.prevClose?fmtPrice(d.prevClose):'—'],
+    [crypto?'24h Range':"Day's Range", (d.dayLow&&d.dayHigh)?`${fmtPrice(d.dayLow)} – ${fmtPrice(d.dayHigh)}`:'—'],
+    ['52 Week Range', (d.atl&&d.ath)?`${fmtPrice(d.atl)} – ${fmtPrice(d.ath)}`:'—'],
+    [crypto?'Volume (24h)':'Volume', d.volume?fmtBig(d.volume):'—'],
+  ];
+  if(d.avgVolume) rows.push(['Avg. Volume', fmtBig(d.avgVolume)]);
+  rows.push(etf?['Net Assets',money(d.netAssets)]:[crypto?'Market Cap':'Market Cap (intraday)',money(d.marketCap)]);
+  if(!crypto) rows.push(['Dividend Yield', d.dividendYield?(d.dividendYield*100).toFixed(2)+'%':'—']);
+  if(etf) rows.push(['Expense Ratio', d.expenseRatio!=null?(d.expenseRatio*100).toFixed(2)+'%':'N/A']);
+  box.innerHTML=rows.map(([k,v])=>`<div class="stat-row"><span>${k}</span><b>${v}</b></div>`).join('');
+}
+
+const newsCache={}; let newsToken=0;
+function renderNews(items) {
+  const box=document.getElementById('newsList');
+  const ok=(items||[]).filter(a=>a&&a.title&&/^https?:\/\//.test(a.link||''));
+  box.innerHTML = ok.length ? ok.map(a=>`<a class="news-item" href="${esc(a.link)}" target="_blank" rel="noopener noreferrer"><div class="news-title">${esc(a.title)}</div><div class="news-meta">${esc(a.publisher||'')}${a.publishedAt?' · '+timeAgo(a.publishedAt):''}</div></a>`).join('')
+                      : '<div class="news-empty">No recent headlines.</div>';
+}
+async function loadNews(d) {
+  const box=document.getElementById('newsList'); if(!box||!d) return;
+  const q=chartSymbol(d), tok=++newsToken;
+  document.getElementById('newsSym').textContent=d.sym;
+  const hit=newsCache[q];
+  if(hit) renderNews(hit.items); else box.innerHTML='<div class="news-empty">Loading news…</div>';
+  if(hit && Date.now()-hit.at<300000) return;          // fresh enough (5 min)
+  try {
+    const r=await fetchWithTimeout(`${BACKEND}/api/news/${encodeURIComponent(q)}`,15000);
+    newsCache[q]={at:Date.now(),items:r.articles||[]};
+    if(tok===newsToken) renderNews(newsCache[q].items);
+  } catch { if(!hit && tok===newsToken) box.innerHTML='<div class="news-empty">News unavailable right now.</div>'; }
 }
 
 function setBar(id,val) {
@@ -826,8 +946,9 @@ function buildThresholdGrid() {
   DROP_LEVELS.forEach(lv=>{
     const btn=document.createElement('button'); btn.className='threshold-btn';
     const abs=Math.abs(lv);
-    if(d.drop>=abs+3) btn.classList.add('past');
-    else if(d.drop>=abs) btn.classList.add('hit');
+    const off=d.ath>0?(d.athDrop||0):d.drop;   // measured from the 52W high, like the tranche ladder
+    if(off>=abs+3) btn.classList.add('past');
+    else if(off>=abs) btn.classList.add('hit');
     else if(lv===selThreshold) btn.classList.add('sel');
     btn.textContent=lv+'%';
     btn.onclick=()=>{selThreshold=lv;buildThresholdGrid();updateTranches(d.price,d.drop);schedSave();};
@@ -835,13 +956,13 @@ function buildThresholdGrid() {
   });
 }
 
-function buildNotifThresholds() {
+function buildNotifThresholds(levels) {
   const g=document.getElementById('notifThresholds'); g.innerHTML='';
-  const checked=new Set([-10,-20,-30,-40,-50]);
+  const checked=new Set((levels&&levels.length?levels:[-10,-20,-30,-40,-50]).map(Number));
   DROP_LEVELS.forEach(lv=>{
     const item=document.createElement('div');
     item.className='cb-item'+(checked.has(lv)?' checked':'');
-    item.innerHTML=`<input type="checkbox" ${checked.has(lv)?'checked':''} onchange="this.parentElement.classList.toggle('checked',this.checked);schedSave()"><span>${lv}%</span>`;
+    item.innerHTML=`<input type="checkbox" data-lv="${lv}" ${checked.has(lv)?'checked':''} onchange="this.parentElement.classList.toggle('checked',this.checked);schedSave()"><span>${lv}%</span>`;
     g.appendChild(item);
   });
 }
@@ -856,15 +977,17 @@ function updateTranches(price,drop) {
   const offHigh=hasHigh?Math.max(0,(high-price)/high*100):0;
   const list=document.getElementById('trancheList'); list.innerHTML='';
   const ref=document.getElementById('trancheRef');
-  if(ref) ref.innerHTML=hasHigh
+  const alertLvl=Math.abs(selThreshold);
+  if(ref) ref.innerHTML=(hasHigh
     ? `Levels from 52W high <b>${fmtPrice(high)}</b> · now <b>-${offHigh.toFixed(1)}%</b>`
-    : `52W high unavailable — levels are from current price <b>${fmtPrice(price)}</b>`;
+    : `52W high unavailable — levels are from current price <b>${fmtPrice(price)}</b>`)
+    + `<br>Alert trigger: <b>-${alertLvl}%</b> → <b>${fmtPrice(high*(1-alertLvl/100))}</b>`;
   const weights=[15,20,25,25,15];
   TRANCHE_LEVELS.forEach((lvl,i)=>{
     const bp=high*(1-lvl/100);
     const alloc=Math.round(cap*weights[i]/100);
     const isReady=offHigh>=lvl, isFired=offHigh>=lvl+3;
-    const el=document.createElement('div'); el.className='tranche';
+    const el=document.createElement('div'); el.className='tranche'+(lvl===alertLvl?' tranche-alert':'');
     el.innerHTML=`<div class="tr-num">#${i+1}</div><div class="tr-trigger">-${lvl}% → ${fmtPrice(bp)}</div><div class="tr-alloc">$${alloc.toLocaleString()}</div><div class="tr-status ${isFired?'ts-done':isReady?'ts-ready':'ts-wait'}">${isFired?'FIRED':isReady?'READY':'WAITING'}</div>`;
     list.appendChild(el);
   });
@@ -911,11 +1034,14 @@ function buildStockGrid() {
 
     // Extra stats rows (shown below main card row)
     const prevCloseHtml = s.prevClose ? `<span>Prev Close <b>${fmtPrice(s.prevClose)}</b></span>` : '';
-    const dayRangeHtml  = (s.dayLow && s.dayHigh) ? `<span>Day Range <b>${fmtPrice(s.dayLow)} – ${fmtPrice(s.dayHigh)}</b></span>` : '';
+    const dayRangeHtml  = (s.dayLow && s.dayHigh) ? `<span>${s.type==='crypto'?'24h Range':'Day Range'} <b>${fmtPrice(s.dayLow)} – ${fmtPrice(s.dayHigh)}</b></span>` : '';
     const wkRangeHtml   = (s.atl && s.ath) ? `<span>52W Range <b>${fmtPrice(s.atl)} – ${fmtPrice(s.ath)}</b></span>` : '';
     const yieldHtml     = s.dividendYield ? `<span>Yield <b>${(s.dividendYield*100).toFixed(2)}%</b></span>` : '';
     const expHtml       = (s.quoteType==='ETF') ? `<span style="color:var(--purple)">Expense Ratio <b>${s.expenseRatio!=null?(s.expenseRatio*100).toFixed(2)+'%':'N/A'}</b></span>` : '';
-    const statsRow      = [prevCloseHtml, dayRangeHtml, wkRangeHtml, yieldHtml, expHtml].filter(Boolean).join('');
+    const volHtml       = s.volume ? `<span>${s.type==='crypto'?'Vol 24h':'Volume'} <b>${fmtBig(s.volume)}</b></span>` : '';
+    const capHtml       = s.quoteType==='ETF' ? (s.netAssets ? `<span>Net Assets <b>$${fmtBig(s.netAssets)}</b></span>` : '')
+                                              : (s.marketCap ? `<span>Mkt Cap <b>$${fmtBig(s.marketCap)}</b></span>` : '');
+    const statsRow      = [prevCloseHtml, dayRangeHtml, wkRangeHtml, volHtml, capHtml, yieldHtml, expHtml].filter(Boolean).join('');
 
     const card=document.createElement('div');
     card.className='stock-card'+(i===activeIdx?' active':'');
@@ -924,7 +1050,7 @@ function buildStockGrid() {
       <div style="width:100%;min-width:0">
         <div class="sc-main">
           <div class="sc-left">
-            <div><span class="sc-sym">${s.sym}</span><span class="sc-tag ${s.isLive?'tag-live':'tag-est'}">${s.isLive?'LIVE':'EST'}</span>${s.quoteType==='ETF'?'<span class="sc-tag" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(124,58,237,0.2)">ETF</span>':''}</div>
+            <div><span class="sc-sym">${s.sym}</span><span class="sc-tag ${s.isLive?'tag-live':'tag-est'}">${s.isLive?'LIVE':'EST'}</span>${s.quoteType==='ETF'?'<span class="sc-tag" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(124,58,237,0.2)">ETF</span>':''}${s.type==='crypto'?'<span class="sc-tag" style="background:var(--surface);color:var(--muted);border:1px solid var(--border)">CRYPTO</span>':''}</div>
             ${displayName?`<div class="sc-name">${displayName}</div>`:''}
           </div>
           <div class="sc-pricebox">
@@ -969,17 +1095,9 @@ async function addStock() {
     const r=await fetch(`${BACKEND}/api/watchlist`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sym,type,cgId,label})});
     const d=await r.json();
     if(d.error){setBanner('error',`⚠ ${d.error}`);setTimeout(hideBanner,3000);return;}
-    let ns={sym,type,cgId,label,price:0,change24:0,drop:0,ath:0,athDrop:0,rsi:38,fear:fearGreed,vol:1.2,isLive:false};
-    try {
-      if(isCrypto){
-        const pd=await fetchCrypto(input);
-        if(pd&&pd.usd){const c=pd.usd_24h_change||0;ns={...ns,price:pd.usd,change24:c,drop:c<0?+Math.abs(c).toFixed(2):0,vol:+(1+Math.abs(c)/5).toFixed(1),isLive:true};}
-      } else {
-        const pd=await fetchStock(sym);
-        if(pd&&pd.price){const c=pd.changePct||0;const ath=pd.fiftyTwoWeekHigh||0;const ad=ath>0?+(((ath-pd.price)/ath)*100).toFixed(1):0;ns={...ns,price:pd.price,change24:c,drop:c<0?+Math.abs(c).toFixed(2):0,ath,atl:pd.fiftyTwoWeekLow||0,athDrop:ad,vol:+(1+Math.abs(c)/5).toFixed(1),prevClose:pd.previousClose??pd.prevClose??null,dayHigh:pd.dayHigh??null,dayLow:pd.dayLow??null,quoteType:pd.quoteType||'EQUITY',dividendYield:pd.dividendYield??null,expenseRatio:pd.expenseRatio??null,longName:pd.name||pd.longName||'',isLive:true};}
-      }
-    } catch {}
+    const ns={sym,type,cgId,label,price:0,change24:0,drop:0,ath:0,athDrop:0,rsi:38,fear:fearGreed,vol:1.2,isLive:false};
     stocks.push(ns);
+    try { const cgMap=isCrypto?await fetchCryptoMarkets([cgId]):null; await refreshStock(ns,stocks.length-1,cgMap); } catch {}
     document.getElementById('inSym').value=''; document.getElementById('inLabel').value='';
     buildStockGrid(); showSaveBadge(); hideBanner();
     addLog('save',`✔ ${sym} added & saved`);
@@ -1088,11 +1206,44 @@ async function testSMS() {
 }
 
 // ── TAB SWITCH ─────────────────────────────────
+async function loadAlertStatus() {
+  const box=document.getElementById('autoStatus'); if(!box) return;
+  try {
+    const s=await fetchWithTimeout(`${BACKEND}/api/alerts/status`,20000);
+    const ago=s.lastRun?Math.max(0,Math.round((Date.now()-new Date(s.lastRun))/60000)):null;
+    const lines=[];
+    if(!s.enabled) lines.push('<span class="warn">Automatic alerts are OFF.</span>');
+    if(!s.emailSet) lines.push('<span class="warn">No email saved — enter your Primary Email above.</span>');
+    if(!s.smtpConfigured) lines.push('<span class="warn">Server email (SMTP) is not configured on Render.</span>');
+    lines.push(s.lastRun?`Last check <b>${ago<1?'just now':ago+' min ago'}</b> · every <b>${s.intervalMin} min</b> · <b>${s.sentTotal}</b> alert${s.sentTotal===1?'':'s'} sent`
+                        :`Waiting for the first server check (runs every <b>${s.intervalMin} min</b>).`);
+    if(s.lastResult&&s.lastResult.primed) lines.push('Baseline recorded — you\'ll be emailed when something <b>new</b> crosses a level.');
+    if(s.lastResult&&s.lastResult.notes&&s.lastResult.notes.length) lines.push('<span class="warn">'+esc(s.lastResult.notes[0])+'</span>');
+    if(s.recent&&s.recent.length) lines.push('Latest: <b>'+esc(s.recent[0].sym)+'</b> '+esc(s.recent[0].text));
+    box.innerHTML=lines.join('<br>');
+  } catch { box.textContent='Could not reach the server (it may be waking up — try again in 30s).'; }
+}
+async function checkAlertsNow() {
+  const b=document.getElementById('alertBanner');
+  b.textContent='Checking prices…'; b.className='alert-banner show ab-warn';
+  try {
+    await saveSettings();                                   // make sure the server has your latest email/thresholds
+    const r=await fetch(`${BACKEND}/api/alerts/check`,{method:'POST'}); const d=await r.json();
+    if(d.skipped){ b.textContent='⚠ '+d.skipped; b.className='alert-banner show ab-warn'; }
+    else if(d.error){ b.textContent='⚠ '+d.error; b.className='alert-banner show ab-warn'; }
+    else if(d.emailSent){ b.textContent=`✔ ${d.events} alert${d.events===1?'':'s'} emailed`; b.className='alert-banner show ab-ok'; addLog('email',`📧 ${d.events} automatic alert(s) emailed`); }
+    else if(d.notes&&d.notes.length){ b.textContent='ℹ '+d.notes[0]; b.className='alert-banner show ab-ok'; }
+    else { b.textContent=`✔ Checked ${d.checked} symbols — nothing new to alert`; b.className='alert-banner show ab-ok'; }
+  } catch { b.textContent='⚠ Backend unreachable.'; b.className='alert-banner show ab-warn'; }
+  loadAlertStatus(); setTimeout(()=>b.classList.remove('show'),6000);
+}
+
 function switchTab(t) {
   const ids=['dashboard','stocks','portfolio','alerts','log'];
   document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',ids[i]===t));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+t).classList.add('active');
+  if(t==='alerts') loadAlertStatus();
 }
 
 // ── INIT ───────────────────────────────────────
