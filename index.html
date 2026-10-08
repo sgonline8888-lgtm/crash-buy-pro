@@ -67,7 +67,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--fd);min-height:100
 .src-live{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,168,107,0.2)}
 .src-est{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(217,119,6,0.2)}
 .last-upd{font-size:10px;font-family:var(--fm);color:var(--muted2);margin-top:3px}
-canvas#priceChart{width:100%!important;height:140px!important}
+.range-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.range-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.range-tabs::-webkit-scrollbar{display:none}
+.range-btn{font-family:var(--fm);font-size:11px;font-weight:700;padding:5px 9px;border-radius:6px;border:none;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+.range-btn.active{background:var(--accent-dim);color:var(--accent)}
+.range-chg{font-family:var(--fm);font-size:11px;font-weight:700;white-space:nowrap}
+.chart-wrap{position:relative;height:240px}
+canvas#priceChart{width:100%!important;height:100%!important}
+.chart-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:12px;color:var(--muted);pointer-events:none}
+.tranche-ref{font-family:var(--fm);font-size:11px;color:var(--muted);margin-bottom:8px}
+.tranche-ref b{color:var(--text)}
 
 /* ATH LINE INFO */
 .ath-info{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:9px;padding:10px 14px;margin-top:12px;border:1px solid var(--border)}
@@ -137,24 +147,36 @@ input[type=range]{flex:2;accent-color:var(--accent)}
 .hint{font-size:10px;font-family:var(--fm);color:var(--muted2);margin-bottom:12px;line-height:1.7}
 
 .stock-grid{display:flex;flex-direction:column;gap:7px}
-.stock-card{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:all 0.15s}
+.stock-card{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:all 0.15s;min-width:0}
 .sc-stats-row{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;padding-top:7px;border-top:1px solid var(--border);font-size:11px;font-family:var(--fm);color:var(--muted)}
 .sc-stats-row b{color:var(--text);font-weight:700}
+.sc-stats-row span{white-space:nowrap}
+.sc-main{display:grid;align-items:center;gap:8px 12px;grid-template-columns:minmax(0,1fr) auto auto auto auto;grid-template-areas:"left price ath score act"}
+.sc-left{grid-area:left}
+.sc-pricebox{grid-area:price;text-align:right}
+.sc-ath{grid-area:ath}
+.sc-scorebox{grid-area:score}
+.sc-actions{grid-area:act;display:flex;gap:5px;justify-content:flex-end}
+@media(max-width:640px){
+  .sc-main{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"left left price" "ath score act"}
+  .sc-ath{text-align:left!important}
+  .sc-scorebox{text-align:center}
+}
 .stock-card:hover{border-color:rgba(0,82,255,0.25)}
 .stock-card.active{border-color:var(--accent);background:var(--accent-dim)}
 .sc-left{flex:1;min-width:0}
 .sc-sym{font-family:var(--fm);font-size:13px;font-weight:700;color:var(--text)}
-.sc-name{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.sc-name{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .sc-tag{font-size:9px;font-family:var(--fm);font-weight:700;padding:2px 5px;border-radius:3px;margin-left:6px;vertical-align:middle}
 .tag-live{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,168,107,0.2)}
 .tag-est{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(217,119,6,0.2)}
-.sc-price{font-family:var(--fm);font-size:14px;font-weight:700;text-align:right;min-width:80px}
+.sc-price{font-family:var(--fm);font-size:14px;font-weight:700;text-align:right}
 .sc-change{font-size:11px;font-family:var(--fm);font-weight:700;text-align:right;margin-top:2px}
-.sc-ath{text-align:right;min-width:110px}
+.sc-ath{text-align:right;min-width:0}
 .sc-ath-val{font-size:11px;font-family:var(--fm);color:var(--muted)}
 .sc-ath-num{font-size:12px;font-family:var(--fm);font-weight:700}
 .sc-ath-off{font-size:11px;font-family:var(--fm);font-weight:700;margin-top:1px}
-.sc-score{font-family:var(--fm);font-size:15px;font-weight:700;text-align:center;min-width:36px}
+.sc-score{font-family:var(--fm);font-size:15px;font-weight:700;text-align:center;min-width:0}
 .sc-score-lbl{font-size:9px;font-family:var(--fm);color:var(--muted);text-align:center;text-transform:uppercase}
 .btn-sm{font-family:var(--fm);font-size:10px;font-weight:700;padding:4px 9px;border-radius:5px;cursor:pointer;transition:all 0.12s}
 .btn-view{border:1px solid var(--accent);background:transparent;color:var(--accent)}
@@ -258,7 +280,14 @@ input[type=range]{flex:2;accent-color:var(--accent)}
           <div class="chart-val" id="curChangeMeta">—</div>
         </div>
       </div>
-      <canvas id="priceChart"></canvas>
+      <div class="range-row">
+        <div class="range-tabs" id="rangeTabs"></div>
+        <div class="range-chg" id="rangeChg"></div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="priceChart"></canvas>
+        <div class="chart-msg" id="chartMsg"></div>
+      </div>
       <!-- ATH LINE INFO -->
       <div class="ath-info" id="athInfo">
         <div class="ath-left">
@@ -299,7 +328,8 @@ input[type=range]{flex:2;accent-color:var(--accent)}
     <div class="card">
       <div class="card-title">Strategy Parameters</div>
       <div class="param-row"><div class="param-label">Capital to deploy ($)</div><input type="range" min="1000" max="50000" value="10000" step="500" id="capitalSlider" oninput="updateParams()"><div class="param-val" id="capitalVal">$10,000</div></div>
-      <div class="param-row"><div class="param-label">Tranches</div><input type="range" min="2" max="5" value="3" step="1" id="trancheSlider" oninput="updateParams()"><div class="param-val" id="trancheVal">3</div></div>
+      <input type="hidden" id="trancheSlider" value="5">
+      <div class="param-row"><div class="param-label">Tranche levels</div><div style="font-family:var(--fm);font-size:12px;font-weight:700;color:var(--text);text-align:right;flex:1">-10 / -20 / -30 / -40 / -50% from 52W high</div></div>
       <div class="param-row"><div class="param-label">Stop-loss %</div><input type="range" min="5" max="30" value="15" step="1" id="stopSlider" oninput="updateParams()"><div class="param-val" id="stopVal">-15%</div></div>
     </div>
 
@@ -308,6 +338,7 @@ input[type=range]{flex:2;accent-color:var(--accent)}
         <div class="card-title" style="margin-bottom:0">Tranche Execution Plan</div>
         <div class="rec-badge rb-wait" id="recBadge">—</div>
       </div>
+      <div class="tranche-ref" id="trancheRef"></div>
       <div class="tranche-list" id="trancheList"></div>
       <div class="action-row">
         <button class="btn btn-primary" onclick="executeBuy()">EXECUTE PLAN ↗</button>
@@ -578,7 +609,6 @@ async function loadSettings() {
     if(d.tog4!==undefined) document.getElementById('tog4').checked=d.tog4;
     if(d.threshold) selThreshold=d.threshold;
     if(d.capital) document.getElementById('capitalSlider').value=d.capital;
-    if(d.tranches) document.getElementById('trancheSlider').value=d.tranches;
     if(d.stopLoss) document.getElementById('stopSlider').value=d.stopLoss;
     updateParams();
   } catch {}
@@ -613,47 +643,106 @@ function genPriceData(s) {
   }
   prices[prices.length-1]=s.price; return prices;
 }
-function initChart(idx) {
+// ── CHART (Yahoo-style: real history, right-hand price scale, date axis, hover crosshair) ──
+const RANGES=[['1D','1D'],['5D','1W'],['1M','1M'],['3M','3M'],['6M','6M'],['YTD','YTD'],['1Y','1Y'],['5Y','5Y']];
+let chartRange='1D', chartToken=0;
+const histCache={};
+const INTRADAY=['1D','1W'];
+
+function buildRangeTabs(){
+  const box=document.getElementById('rangeTabs'); box.innerHTML='';
+  RANGES.forEach(([label,key])=>{
+    const b=document.createElement('button');
+    b.className='range-btn'+(key===chartRange?' active':''); b.textContent=label;
+    b.onclick=()=>{chartRange=key; buildRangeTabs(); initChart(activeIdx);};
+    box.appendChild(b);
+  });
+}
+function chartSymbol(s){ return s.type==='crypto' ? s.sym.replace('/','-') : s.sym; }
+function setChartMsg(t){ const m=document.getElementById('chartMsg'); if(m) m.textContent=t||''; }
+function fmtAxis(v){ return v>=1000 ? v.toLocaleString(undefined,{maximumFractionDigits:0}) : v>=1 ? v.toFixed(2) : v.toFixed(4); }
+function fmtTick(ts){
+  const d=new Date(ts);
+  if(chartRange==='1D') return d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+  if(chartRange==='1W') return d.toLocaleDateString([], {weekday:'short',day:'numeric'});
+  if(chartRange==='1Y'||chartRange==='5Y') return d.toLocaleDateString([], {month:'short',year:chartRange==='5Y'?'2-digit':undefined});
+  return d.toLocaleDateString([], {month:'short',day:'numeric'});
+}
+const crosshairPlugin={id:'crosshair',afterDatasetsDraw(chart){
+  const act=chart.tooltip&&chart.tooltip._active;
+  if(act&&act.length){
+    const x=act[0].element.x, {top,bottom}=chart.chartArea, c=chart.ctx;
+    c.save(); c.beginPath(); c.moveTo(x,top); c.lineTo(x,bottom);
+    c.lineWidth=1; c.strokeStyle='rgba(100,110,130,0.55)'; c.setLineDash([3,3]); c.stroke(); c.restore();
+  }
+}};
+
+async function initChart(idx) {
   const s=stocks[idx]; if(!s||!s.price) return;
+  if(!document.getElementById('rangeTabs').children.length) buildRangeTabs();
+  const token=++chartToken;
+  const key=s.sym+'|'+chartRange;
+  let hist=histCache[key];
+  if(!hist||Date.now()-hist.at>60000){
+    if(!hist) setChartMsg('Loading chart…');
+    try{
+      const d=await fetchWithTimeout(`${BACKEND}/api/history/${encodeURIComponent(chartSymbol(s))}?range=${chartRange}`,35000);
+      if(!d.prices||!d.prices.length) throw new Error('empty');
+      hist=histCache[key]={at:Date.now(),prices:d.prices};
+    }catch(e){
+      if(!hist){ if(token===chartToken){ if(chartInst){chartInst.destroy();chartInst=null;} setChartMsg('Chart unavailable for this symbol'); document.getElementById('rangeChg').textContent=''; } return; }
+    }
+  }
+  if(token!==chartToken) return;
+  drawChart(s,hist.prices);
+}
+
+function drawChart(s,pts){
+  setChartMsg('');
   const ctx=document.getElementById('priceChart').getContext('2d');
   if(chartInst) chartInst.destroy();
+  const labels=pts.map(p=>p[0]), data=pts.map(p=>p[1]);
+  const first=data[0], last=data[data.length-1];
+  const up=last>=first, col=up?'#00a86b':'#e03131';
+  const grad=ctx.createLinearGradient(0,0,0,240);
+  grad.addColorStop(0,up?'rgba(0,168,107,0.22)':'rgba(224,49,49,0.20)'); grad.addColorStop(1,'rgba(255,255,255,0)');
 
-  const prices = genPriceData(s);
-  const athLine = s.ath > 0 ? Array(60).fill(s.ath) : null;
+  const chg=first?((last-first)/first*100):0;
+  const rc=document.getElementById('rangeChg');
+  rc.textContent=`${chg>=0?'+':''}${chg.toFixed(2)}%`; rc.style.color=up?'var(--green)':'var(--red)';
 
-  const datasets = [{
-    label:'Price', data:prices,
-    borderColor:'#e03131', borderWidth:2, pointRadius:0,
-    fill:true, backgroundColor:'rgba(224,49,49,0.06)', tension:0.3, yAxisID:'y'
-  }];
+  const datasets=[{label:'Price',data,borderColor:col,borderWidth:1.8,pointRadius:0,pointHoverRadius:4,
+    pointHoverBackgroundColor:col,fill:true,backgroundColor:grad,tension:0.15}];
+  if(chartRange==='1D' && s.prevClose) datasets.push({label:'Prev close',data:Array(data.length).fill(s.prevClose),
+    borderColor:'rgba(120,130,150,0.7)',borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false});
+  if(['6M','YTD','1Y','5Y'].includes(chartRange) && s.ath>0) datasets.push({label:'52W High',data:Array(data.length).fill(s.ath),
+    borderColor:'rgba(0,82,255,0.55)',borderWidth:1.2,borderDash:[5,4],pointRadius:0,fill:false});
 
-  if (athLine) {
-    datasets.push({
-      label:'52W High', data:athLine,
-      borderColor:'rgba(0,82,255,0.5)', borderWidth:1.5,
-      borderDash:[5,4], pointRadius:0, fill:false, tension:0, yAxisID:'y'
-    });
-  }
-
-  chartInst = new Chart(ctx, {
-    type:'line',
-    data:{labels:Array(60).fill(''), datasets},
+  const mono='ui-monospace, SFMono-Regular, Menlo, monospace';
+  chartInst=new Chart(ctx,{
+    type:'line', data:{labels,datasets}, plugins:[crosshairPlugin],
     options:{
-      responsive:true, maintainAspectRatio:false,
+      responsive:true, maintainAspectRatio:false, animation:{duration:300},
+      interaction:{mode:'index',intersect:false},
+      layout:{padding:{right:2,top:6}},
       plugins:{
         legend:{display:false},
-        tooltip:{
-          enabled:true,
+        tooltip:{displayColors:false,filter:i=>i.datasetIndex===0,
           callbacks:{
-            label: ctx => ctx.dataset.label==='52W High' ? `52W High: ${fmtPrice(ctx.raw)}` : `Price: ${fmtPrice(ctx.raw)}`
-          }
-        }
+            title:items=>{const d=new Date(labels[items[0].dataIndex]);
+              return INTRADAY.includes(chartRange)
+                ? d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
+                : d.toLocaleDateString([], {year:'numeric',month:'short',day:'numeric'});},
+            label:c=>fmtPrice(c.raw)
+          }}
       },
       scales:{
-        x:{display:false},
-        y:{display:false}
-      },
-      animation:{duration:600}
+        x:{grid:{display:false},border:{display:false},
+          ticks:{maxTicksLimit:5,maxRotation:0,autoSkip:true,color:'#8a93a6',font:{size:10,family:mono},
+            callback:function(v){return fmtTick(this.getLabelForValue(v));}}},
+        y:{position:'right',grace:'5%',grid:{color:'rgba(100,110,130,0.12)'},border:{display:false},
+          ticks:{maxTicksLimit:6,color:'#8a93a6',font:{size:10,family:mono},callback:v=>fmtAxis(v)}}
+      }
     }
   });
 }
@@ -757,29 +846,32 @@ function buildNotifThresholds() {
   });
 }
 
+// Tranche plan: fixed ladder of 10/20/30/40/50% below the 52-week high
+const TRANCHE_LEVELS=[10,20,30,40,50];
 function updateTranches(price,drop) {
-  const n=parseInt(document.getElementById('trancheSlider').value);
   const cap=parseInt(document.getElementById('capitalSlider').value);
-  const trigger=Math.abs(selThreshold);
+  const s=stocks[activeIdx]||{};
+  const hasHigh=s.ath>0;
+  const high=hasHigh?s.ath:price;                       // reference = 52W high (falls back to current price if unknown)
+  const offHigh=hasHigh?Math.max(0,(high-price)/high*100):0;
   const list=document.getElementById('trancheList'); list.innerHTML='';
-  const weights=n===2?[40,60]:n===3?[25,35,40]:n===4?[20,25,30,25]:[15,20,25,25,15];
-  const intervals=n===2?[0,5]:n===3?[0,5,10]:n===4?[0,4,8,12]:[0,3,6,10,15];
-  const ath=price/(1-Math.max(drop,0.5)/100);
-  for(let i=0;i<n;i++){
-    const dropAt=trigger+intervals[i];
-    const bp=ath*(1-dropAt/100);
-    const bpFmt=bp>10?'$'+Math.round(bp).toLocaleString():'$'+bp.toFixed(4);
+  const ref=document.getElementById('trancheRef');
+  if(ref) ref.innerHTML=hasHigh
+    ? `Levels from 52W high <b>${fmtPrice(high)}</b> · now <b>-${offHigh.toFixed(1)}%</b>`
+    : `52W high unavailable — levels are from current price <b>${fmtPrice(price)}</b>`;
+  const weights=[15,20,25,25,15];
+  TRANCHE_LEVELS.forEach((lvl,i)=>{
+    const bp=high*(1-lvl/100);
     const alloc=Math.round(cap*weights[i]/100);
-    const isReady=drop>=dropAt,isFired=drop>=dropAt+3;
+    const isReady=offHigh>=lvl, isFired=offHigh>=lvl+3;
     const el=document.createElement('div'); el.className='tranche';
-    el.innerHTML=`<div class="tr-num">#${i+1}</div><div class="tr-trigger">-${dropAt}% → ${bpFmt}</div><div class="tr-alloc">$${alloc.toLocaleString()}</div><div class="tr-status ${isFired?'ts-done':isReady?'ts-ready':'ts-wait'}">${isFired?'FIRED':isReady?'READY':'WAITING'}</div>`;
+    el.innerHTML=`<div class="tr-num">#${i+1}</div><div class="tr-trigger">-${lvl}% → ${fmtPrice(bp)}</div><div class="tr-alloc">$${alloc.toLocaleString()}</div><div class="tr-status ${isFired?'ts-done':isReady?'ts-ready':'ts-wait'}">${isFired?'FIRED':isReady?'READY':'WAITING'}</div>`;
     list.appendChild(el);
-  }
+  });
 }
 
 function updateParams() {
   document.getElementById('capitalVal').textContent='$'+parseInt(document.getElementById('capitalSlider').value).toLocaleString();
-  document.getElementById('trancheVal').textContent=document.getElementById('trancheSlider').value;
   document.getElementById('stopVal').textContent='-'+document.getElementById('stopSlider').value+'%';
   const d=stocks[activeIdx]; if(d&&d.price) updateTranches(d.price,d.drop);
   schedSave();
@@ -829,22 +921,22 @@ function buildStockGrid() {
     card.className='stock-card'+(i===activeIdx?' active':'');
     card.onclick=()=>{activeIdx=i;buildStockGrid();};
     card.innerHTML=`
-      <div style="width:100%">
-        <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:100%;min-width:0">
+        <div class="sc-main">
           <div class="sc-left">
             <div><span class="sc-sym">${s.sym}</span><span class="sc-tag ${s.isLive?'tag-live':'tag-est'}">${s.isLive?'LIVE':'EST'}</span>${s.quoteType==='ETF'?'<span class="sc-tag" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(124,58,237,0.2)">ETF</span>':''}</div>
             ${displayName?`<div class="sc-name">${displayName}</div>`:''}
           </div>
-          <div style="text-align:right;min-width:80px">
+          <div class="sc-pricebox">
             <div class="sc-price">${fmtPrice(s.price)}</div>
             ${changeBadge}
           </div>
           ${athHtml}
-          <div>
+          <div class="sc-scorebox">
             <div class="sc-score" style="color:${score>=70?'var(--green)':score>=45?'var(--amber)':'var(--red)'}">${score}</div>
             <div class="sc-score-lbl">score</div>
           </div>
-          <div style="display:flex;gap:5px">
+          <div class="sc-actions">
             <button class="btn-sm btn-view" onclick="event.stopPropagation();selectStock(${i})">${i===activeIdx?'ACTIVE':'VIEW'}</button>
             <button class="btn-sm btn-del" onclick="event.stopPropagation();removeStock(${i})">✕</button>
           </div>
@@ -962,9 +1054,9 @@ function simulateDrop() {
   const drops=[12,18,25,31,38,44]; simStep=(simStep+1)%drops.length;
   const d=stocks[activeIdx]; if(!d||!d.price){addLog('alert','⚠ Load prices first.');return;}
   const nd=drops[simStep];
-  const ath=d.price/(1-Math.max(d.drop,0.5)/100);
+  const ath=d.ath>0?d.ath:d.price/(1-Math.max(d.drop,0.5)/100);
   const np=+(ath*(1-nd/100)).toFixed(4);
-  stocks[activeIdx]={...d,price:np,change24:-nd,drop:nd,rsi:Math.max(12,d.rsi-4),fear:Math.min(95,d.fear+5),vol:Math.min(8,+(d.vol+0.6).toFixed(1)),isLive:false};
+  stocks[activeIdx]={...d,price:np,change24:-nd,drop:nd,athDrop:d.ath>0?nd:d.athDrop,rsi:Math.max(12,d.rsi-4),fear:Math.min(95,d.fear+5),vol:Math.min(8,+(d.vol+0.6).toFixed(1)),isLive:false};
   updateDisplay(stocks[activeIdx]); initChart(activeIdx); buildStockGrid(); updatePortfolio();
   addLog('alert',`⚠ Simulated -${nd}% → ${fmtPrice(np)}`);
 }
