@@ -73,12 +73,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--fd);min-height:100
 .range-btn{font-family:var(--fm);font-size:11px;font-weight:700;padding:5px 9px;border-radius:6px;border:none;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
 .range-btn.active{background:var(--accent-dim);color:var(--accent)}
 .yf-head{margin-bottom:14px}
+.yf-exch{font-size:12px;color:var(--muted);margin-bottom:6px}
 .yf-title{font-size:22px;font-weight:700;line-height:1.25;letter-spacing:-0.3px}
-.yf-star{width:20px;height:20px;vertical-align:-3px;margin-left:8px;fill:#f5a623}
+.yf-star{width:20px;height:20px;vertical-align:-3px;margin-left:8px;fill:none;stroke:var(--muted);stroke-width:1.7;stroke-linejoin:round}
 .yf-priceRow{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-top:10px}
 .yf-price{font-size:36px;font-weight:700;letter-spacing:-1px;line-height:1}
 .yf-chg{font-size:19px;font-weight:600}
-.yf-chg.up{color:#188a42}.yf-chg.down{color:#d6002a}.yf-chg.flat{color:var(--muted)}
+.yf-chg.up{color:#0a7d5e}.yf-chg.down{color:#d6002a}.yf-chg.flat{color:var(--muted)}
 .yf-asof{font-size:12px;color:var(--muted);margin-top:6px}
 .yf-expand{border:none;background:transparent;color:var(--muted);cursor:pointer;padding:5px 6px;border-radius:6px;display:flex;align-items:center}
 .yf-expand:hover{background:var(--accent-dim);color:var(--accent)}
@@ -170,6 +171,15 @@ input[type=range]{flex:2;accent-color:var(--accent)}
 .hint{font-size:10px;font-family:var(--fm);color:var(--muted2);margin-bottom:12px;line-height:1.7}
 
 .stock-grid{display:flex;flex-direction:column;gap:7px}
+.grp-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);font-family:var(--fm);font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--text)}
+.grp-head:first-child{margin-top:2px}
+.grp-count{background:var(--accent-dim);color:var(--accent);border-radius:10px;padding:1px 8px;font-size:10px}
+.grp-chev{margin-left:auto;color:var(--muted);transition:transform .15s}
+.grp-head.collapsed .grp-chev{transform:rotate(-90deg)}
+.grp-body{display:flex;flex-direction:column;gap:7px}
+.grp-body.hidden{display:none}
+.sc-move{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px;font-family:var(--fm);font-size:10px;color:var(--muted)}
+.sc-move select{font-family:var(--fm);font-size:10px;font-weight:700;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 6px}
 .stock-card{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:all 0.15s;min-width:0}
 .sc-stats-row{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;padding-top:7px;border-top:1px solid var(--border);font-size:11px;font-family:var(--fm);color:var(--muted)}
 .sc-stats-row b{color:var(--text);font-weight:700}
@@ -293,6 +303,7 @@ input[type=range]{flex:2;accent-color:var(--accent)}
   <div class="panel active" id="panel-dashboard">
     <div class="card chart-card" id="chartCard">
       <div class="yf-head">
+        <div class="yf-exch" id="yfExch"></div>
         <div class="yf-title"><span id="yfName">—</span> <span id="yfSym"></span><svg class="yf-star" viewBox="0 0 24 24" aria-label="On your watchlist"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></div>
         <div class="yf-priceRow"><span class="yf-price" id="yfPrice">—</span><span class="yf-chg flat" id="yfChg"><span id="yfDiff"></span> <span id="yfPct"></span></span></div>
         <div class="yf-asof" id="yfAsOf">Loading…</div>
@@ -585,6 +596,7 @@ async function refreshStock(s, i, cgMap) {
       prevClose:d.previousClose??d.prevClose??null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
       volume:d.volume??null, avgVolume:d.avgVolume??null, marketCap:d.marketCap??null, netAssets:d.netAssets??null,
       quoteType:d.quoteType||'EQUITY',
+      exchange:d.exchange||null, currency:d.currency||null,
       regularMarketTime:d.regularMarketTime??null, exchangeTz:d.exchangeTimezoneName||null, tzAbbr:d.timezone||null, marketState:d.marketState||null,
       dividendYield:d.dividendYield??null, expenseRatio:d.expenseRatio??null,
       rsi:+(rsi+Math.random()*4).toFixed(1), fear:fearGreed,
@@ -616,6 +628,7 @@ async function refreshStock(s, i, cgMap) {
     volume:(cg&&cg.total_volume)??(y&&y.volume)??null, avgVolume:null,
     marketCap:(cg&&cg.market_cap)??(y&&y.marketCap)??null, netAssets:null,
     quoteType:'CRYPTOCURRENCY', dividendYield:null, expenseRatio:null,
+    exchange:y?(y.exchange||null):null, currency:'USD',
     regularMarketTime:y?(y.regularMarketTime??null):null, exchangeTz:y?(y.exchangeTimezoneName||null):null, tzAbbr:y?(y.timezone||null):null, marketState:y?(y.marketState||null):null,
     rsi:+(rsi+Math.random()*5).toFixed(1), fear:fearGreed,
     longName:(cg&&cg.name)||s.longName||'', isLive:true};
@@ -658,7 +671,7 @@ async function loadWatchlist() {
     setBanner('warn', '⏳ Waking up backend (first load may take ~30s)...');
     const d = await fetchWithTimeout(`${BACKEND}/api/watchlist`, 35000);
     stocks = d.watchlist.map(s => ({
-      sym:s.sym, type:s.type, cgId:s.cgId, label:s.label||s.name||'',
+      sym:s.sym, type:s.type, cgId:s.cgId, label:s.label||s.name||'', group:s.group||null,
       price:0, change24:0, drop:0, ath:0, athDrop:0,
       rsi:40, fear:fearGreed, vol:1.2, isLive:false
     }));
@@ -725,7 +738,8 @@ function genPriceData(s) {
   prices[prices.length-1]=s.price; return prices;
 }
 // ── CHART (Yahoo-style: real history, right-hand price scale, date axis, hover crosshair) ──
-const YF_UP='#188a42', YF_DOWN='#d6002a', YF_PILL='#0b7a5f', YF_BASE='#2c3235';
+const YF_UP='#0a7d5e', YF_DOWN='#d6002a', YF_PILL='#0a7d5e', YF_BASE='#2c3235';
+const UP_RGB='10,125,94', DOWN_RGB='214,0,42';
 const RANGES=[['1D','1D'],['5D','1W'],['1M','1M'],['6M','6M'],['YTD','YTD'],['1Y','1Y'],['5Y','5Y'],['All','MAX']];
 let chartRange='1D', chartToken=0;
 const histCache={};
@@ -806,7 +820,7 @@ function drawChart(s,h){
   const data=pts.map((p,i)=>({x:is1D?p[0]:i,y:p[1]}));
   const first=data[0].y, last=data[n-1].y;
   const base=is1D?(h.previousClose||s.prevClose||first):first;     // 1D is measured against the previous close
-  const up=last>=base, col=up?YF_UP:YF_DOWN, rgb=up?'24,138,66':'214,0,42';
+  const up=last>=base, col=up?YF_UP:YF_DOWN;
 
   // 1D axis spans the whole trading session (only if the session matches the data we got)
   const tp=h.tradingPeriod;
@@ -819,19 +833,31 @@ function drawChart(s,h){
   if(lo===hi){ const pad=Math.abs(lo)*0.005||0.01; lo-=pad; hi+=pad; }
 
   const vols=(volumes&&volumes.length===n)?volumes:[]; const maxV=vols.length?Math.max(0,...vols):0;
-  const datasets=[{label:'Price',data,parsing:false,borderColor:col,borderWidth:1.6,tension:0,order:0,
+  const datasets=[{label:'Price',data,parsing:false,yAxisID:'y',borderColor:col,borderWidth:1.6,tension:0,order:0,fill:false,
     pointRadius:c=>c.dataIndex===n-1?4:0,pointHoverRadius:4,pointBackgroundColor:col,pointBorderColor:col,
-    fill:is1D?{target:{value:base}}:'start',
-    backgroundColor:c=>{
-      const ch=c.chart,a=ch.chartArea; if(!a||!ch.scales.y) return 'transparent';
-      const yb=is1D?ch.scales.y.getPixelForValue(base):a.bottom;
-      const edge=is1D?(up?a.top:a.bottom):a.top;
-      const g=ch.ctx.createLinearGradient(0,yb,0,edge);
-      g.addColorStop(0,`rgba(${rgb},0.04)`); g.addColorStop(1,`rgba(${rgb},0.34)`);
-      return g;
-    }}];
+    // 1D: the line is green while above the previous close and red while below it (like Yahoo)
+    segment:is1D?{borderColor:c=>data[c.p1DataIndex].y>=base?YF_UP:YF_DOWN}:undefined}];
   if(maxV>0) datasets.push({type:'bar',label:'Volume',data:vols.map((v,i)=>({x:data[i].x,y:v})),parsing:false,
     yAxisID:'yv',order:2,borderWidth:0,backgroundColor:'rgba(120,130,150,0.35)',barPercentage:1,categoryPercentage:1});
+
+  // Fill between the price line and the previous close: green above it, red below it (gradient darker away from the line)
+  const fillPlugin={id:'yfFill',beforeDatasetsDraw(chart){
+    const meta=chart.getDatasetMeta(0), pts=meta&&meta.data, a=chart.chartArea, y=chart.scales.y;
+    if(!pts||pts.length<2||!y) return;
+    const c=chart.ctx;
+    const yb=is1D?Math.min(Math.max(y.getPixelForValue(base),a.top),a.bottom):a.bottom;
+    const trace=()=>{ c.beginPath(); let started=false,lx=0;
+      for(const p of pts){ if(p.skip) continue; if(!started){c.moveTo(p.x,yb);started=true;} c.lineTo(p.x,p.y); lx=p.x; }
+      c.lineTo(lx,yb); c.closePath(); };
+    const paint=(y0,y1,rgb,far)=>{
+      if(y1-y0<=0) return;
+      c.save(); c.beginPath(); c.rect(a.left,y0,a.right-a.left,y1-y0); c.clip();
+      const g=c.createLinearGradient(0,yb,0,far); g.addColorStop(0,`rgba(${rgb},0.05)`); g.addColorStop(1,`rgba(${rgb},0.38)`);
+      c.fillStyle=g; trace(); c.fill(); c.restore();
+    };
+    if(is1D){ paint(a.top,yb,UP_RGB,a.top); paint(yb,a.bottom,DOWN_RGB,a.bottom); }
+    else paint(a.top,a.bottom,up?UP_RGB:DOWN_RGB,a.top);
+  }};
 
   // dashed lines + right-axis price tags
   const overlay={id:'yfOverlay',afterDatasetsDraw(chart){
@@ -855,7 +881,7 @@ function drawChart(s,h){
 
   const mono='-apple-system,"Segoe UI",Roboto,sans-serif';
   chartInst=new Chart(ctx,{
-    type:'line', data:{datasets}, plugins:[crosshairPlugin,overlay],
+    type:'line', data:{datasets}, plugins:[crosshairPlugin,fillPlugin,overlay],
     options:{
       responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{mode:'index',axis:'x',intersect:false},
@@ -878,11 +904,11 @@ function drawChart(s,h){
             else{ const k=5,span=sc.max-sc.min; sc.ticks=Array.from({length:k},(_,i)=>({value:Math.round(sc.min+span*(i+0.5)/k)})); }
           },
           ticks:{autoSkip:false,maxRotation:0,color:'#5b6370',font:{size:11,family:mono},
-            callback:v=>is1D?tzFmt(v,tz,{hour:'numeric',minute:'2-digit'},'toLocaleTimeString').toLowerCase()
+            callback:v=>is1D?tzFmt(v,tz,{hour:'numeric',minute:'2-digit'},'toLocaleTimeString')
                             :fmtTick(stamps[Math.max(0,Math.min(n-1,Math.round(v)))],tz)}},
-        yv:{display:false,position:'left',min:0,max:(maxV||1)*6,grid:{display:false}},
-        y:{position:'right',suggestedMin:lo,suggestedMax:hi,grace:'6%',grid:{color:'rgba(100,110,130,0.18)'},border:{display:false},
-          ticks:{maxTicksLimit:6,color:'#5b6370',font:{size:11,family:mono},callback:v=>fmtNum(v)}}
+        y:{position:'right',bounds:'data',suggestedMin:lo,suggestedMax:hi,grace:'3%',grid:{color:'rgba(100,110,130,0.18)'},border:{display:false},
+          ticks:{maxTicksLimit:6,includeBounds:false,color:'#5b6370',font:{size:11,family:mono},callback:v=>fmtNum(v)}},
+        yv:{display:false,position:'left',min:0,max:(maxV||1)*6,grid:{display:false}}
       }
     }
   });
@@ -897,19 +923,24 @@ document.addEventListener('keydown',e=>{ const c=document.getElementById('chartC
 
 // ── DISPLAY ────────────────────────────────────
 // "Keppel Infrastructure Trust (A7RU.SI)  /  0.4950  -0.0050 (-1.00%)  /  At close: 5:10:51 pm SGT"
+function tzLabel(ms,tz,abbr) {
+  try { const p=new Intl.DateTimeFormat('en-US',{timeZone:tz||undefined,timeZoneName:'shortOffset'}).formatToParts(new Date(ms)).find(x=>x.type==='timeZoneName'); if(p&&p.value) return p.value; } catch {}
+  return abbr||'';
+}
 function fmtAsOf(d) {
   if(!d.isLive) return 'Estimated — live data unavailable';
   const t=d.regularMarketTime; if(!t) return `Updated: ${new Date().toLocaleTimeString()}`;
-  const tz=d.exchangeTz||null, abbr=d.tzAbbr||'';
-  const time=tzFmt(t,tz,{hour:'numeric',minute:'2-digit',second:'2-digit'},'toLocaleTimeString').toLowerCase();
-  if(d.marketState==='OPEN') return `As of ${time} ${abbr}. Market open.`.replace(' .','.');
+  const tz=d.exchangeTz||null, zone=tzLabel(t,tz,d.tzAbbr);
+  const time=tzFmt(t,tz,{hour:'numeric',minute:'2-digit',second:'2-digit'},'toLocaleTimeString');
+  if(d.marketState==='OPEN') return `As of ${time} ${zone}. Market Open.`;
   const day=ms=>tzFmt(ms,tz,{year:'numeric',month:'numeric',day:'numeric'},'toLocaleDateString');
   const datePart=day(t)!==day(Date.now())?tzFmt(t,tz,{month:'short',day:'numeric'},'toLocaleDateString')+' at ':'';
-  return `At close: ${datePart}${time} ${abbr}`.trim();
+  return `At close: ${datePart}${time} ${zone}`.trim();
 }
 function renderYfHeader(d) {
   document.getElementById('yfName').textContent=d.longName||d.label||d.sym;
   document.getElementById('yfSym').textContent=`(${chartSymbol(d)})`;
+  document.getElementById('yfExch').textContent=[d.exchange,d.currency].filter(Boolean).join(' • ');
   document.getElementById('yfPrice').textContent=fmtNum(d.price);
   let prev=d.prevClose; if(!(prev>0)) prev=d.price/(1+(d.change24||0)/100);
   const diff=d.price-prev, pct=prev?diff/prev*100:0;
@@ -1074,12 +1105,31 @@ function updateParams() {
 }
 
 // ── STOCK GRID ─────────────────────────────────
+// Stock-SG = Singapore (.SI) · Stock-USA = US tickers (no exchange suffix) · Stock-Others = everything else (other exchanges, crypto, FX)
+const STOCK_GROUPS=[['sg','Stock-SG'],['usa','Stock-USA'],['others','Stock-Others']];
+function stockRegion(s) {
+  if(['sg','usa','others'].includes(s.group)) return s.group;      // saved / manually chosen group wins
+  if(s.type==='crypto') return 'others';
+  const sym=String(s.sym||'').toUpperCase();
+  if(sym.endsWith('.SI')) return 'sg';
+  if(/[.=]/.test(sym)) return 'others';
+  return 'usa';
+}
+let collapsedGroups={};
+try { collapsedGroups=JSON.parse(localStorage.getItem('cbGroupsCollapsed')||'{}')||{}; } catch {}
+function toggleGroup(k) {
+  collapsedGroups[k]=!collapsedGroups[k];
+  try { localStorage.setItem('cbGroupsCollapsed',JSON.stringify(collapsedGroups)); } catch {}
+  buildStockGrid();
+}
+
 function buildStockGrid() {
   const g=document.getElementById('stockGrid'); g.innerHTML='';
   if(!stocks.length){
     g.innerHTML='<div style="font-family:var(--fm);font-size:12px;color:var(--muted2);padding:16px 0;text-align:center">No stocks yet. Add one above.</div>';
     return;
   }
+  const buckets={sg:[],usa:[],others:[]};
   stocks.forEach((s,i)=>{
     const score=calcScore(s);
     const c=s.change24||0;
@@ -1141,8 +1191,20 @@ function buildStockGrid() {
           </div>
         </div>
         ${statsRow?`<div class="sc-stats-row">${statsRow}</div>`:''}
+        <div class="sc-move">Group <select onclick="event.stopPropagation()" onchange="moveStock(${i},this.value)">${STOCK_GROUPS.map(([k,l])=>`<option value="${k}"${k===stockRegion(s)?' selected':''}>${l}</option>`).join('')}</select></div>
       </div>`;
-    g.appendChild(card);
+    buckets[stockRegion(s)].push(card);
+  });
+  STOCK_GROUPS.forEach(([k,label])=>{
+    const cards=buckets[k]; if(!cards.length) return;
+    const head=document.createElement('div');
+    head.className='grp-head'+(collapsedGroups[k]?' collapsed':'');
+    head.onclick=()=>toggleGroup(k);
+    head.innerHTML=`<span>${label}</span><span class="grp-count">${cards.length}</span><span class="grp-chev">▾</span>`;
+    const body=document.createElement('div');
+    body.className='grp-body'+(collapsedGroups[k]?' hidden':'');
+    cards.forEach(c=>body.appendChild(c));
+    g.appendChild(head); g.appendChild(body);
   });
 }
 
@@ -1165,10 +1227,10 @@ async function addStock() {
   if(stocks.find(s=>s.sym===sym)){setBanner('warn',`⚠ ${sym} already in watchlist.`);setTimeout(hideBanner,3000);return;}
   setBanner('warn',`Adding ${sym}...`);
   try {
-    const r=await fetch(`${BACKEND}/api/watchlist`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sym,type,cgId,label})});
+    const r=await fetch(`${BACKEND}/api/watchlist`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sym,type,cgId,label,group:stockRegion({sym,type})})});
     const d=await r.json();
     if(d.error){setBanner('error',`⚠ ${d.error}`);setTimeout(hideBanner,3000);return;}
-    const ns={sym,type,cgId,label,price:0,change24:0,drop:0,ath:0,athDrop:0,rsi:38,fear:fearGreed,vol:1.2,isLive:false};
+    const ns={sym,type,cgId,label,group:stockRegion({sym,type}),price:0,change24:0,drop:0,ath:0,athDrop:0,rsi:38,fear:fearGreed,vol:1.2,isLive:false};
     stocks.push(ns);
     try { const cgMap=isCrypto?await fetchCryptoMarkets([cgId]):null; await refreshStock(ns,stocks.length-1,cgMap); } catch {}
     document.getElementById('inSym').value=''; document.getElementById('inLabel').value='';
@@ -1177,6 +1239,16 @@ async function addStock() {
   } catch(e){setBanner('error',`⚠ Failed: ${e.message}`);setTimeout(hideBanner,4000);}
 }
 
+async function moveStock(i,group) {
+  const s=stocks[i]; if(!s||!['sg','usa','others'].includes(group)) return;
+  const old=s.group; s.group=group;
+  buildStockGrid();
+  try {
+    const r=await fetch(`${BACKEND}/api/watchlist/group`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sym:s.sym,group})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    showToast(`✔ ${s.sym} moved to ${(STOCK_GROUPS.find(g=>g[0]===group)||[])[1]}`);
+  } catch(e){ s.group=old; buildStockGrid(); setBanner('error','⚠ Could not save the group change'); setTimeout(hideBanner,3000); }
+}
 async function removeStock(i) {
   const sym=stocks[i].sym;
   try {
