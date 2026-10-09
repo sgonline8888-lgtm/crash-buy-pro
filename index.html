@@ -72,8 +72,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--fd);min-height:100
 .range-tabs::-webkit-scrollbar{display:none}
 .range-btn{font-family:var(--fm);font-size:11px;font-weight:700;padding:5px 9px;border-radius:6px;border:none;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
 .range-btn.active{background:var(--accent-dim);color:var(--accent)}
+.yf-head{margin-bottom:14px}
+.yf-title{font-size:22px;font-weight:700;line-height:1.25;letter-spacing:-0.3px}
+.yf-star{width:20px;height:20px;vertical-align:-3px;margin-left:8px;fill:#f5a623}
+.yf-priceRow{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-top:10px}
+.yf-price{font-size:36px;font-weight:700;letter-spacing:-1px;line-height:1}
+.yf-chg{font-size:19px;font-weight:600}
+.yf-chg.up{color:#188a42}.yf-chg.down{color:#d6002a}.yf-chg.flat{color:var(--muted)}
+.yf-asof{font-size:12px;color:var(--muted);margin-top:6px}
+.yf-expand{border:none;background:transparent;color:var(--muted);cursor:pointer;padding:5px 6px;border-radius:6px;display:flex;align-items:center}
+.yf-expand:hover{background:var(--accent-dim);color:var(--accent)}
+.chart-card.full{position:fixed;inset:0;z-index:200;margin:0;border-radius:0;overflow:auto;padding:16px}
+.chart-card.full .chart-wrap{height:calc(100vh - 250px);min-height:260px}
 .range-chg{font-family:var(--fm);font-size:11px;font-weight:700;white-space:nowrap}
-.chart-wrap{position:relative;height:240px}
+.chart-wrap{position:relative;height:280px}
 canvas#priceChart{width:100%!important;height:100%!important}
 .chart-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:12px;color:var(--muted);pointer-events:none}
 .tranche-ref{font-family:var(--fm);font-size:11px;color:var(--muted);margin-bottom:8px}
@@ -279,24 +291,15 @@ input[type=range]{flex:2;accent-color:var(--accent)}
 
   <!-- DASHBOARD -->
   <div class="panel active" id="panel-dashboard">
-    <div class="card">
-      <div class="chart-header">
-        <div>
-          <div class="price-big" id="curPrice">—</div>
-          <div class="price-change flat" id="curChange">Loading...</div>
-          <div class="last-upd" id="lastUpd"></div>
-        </div>
-        <div class="chart-meta">
-          <div class="chart-label">WATCHING</div>
-          <div style="font-size:14px;font-weight:800;font-family:var(--fm);color:var(--accent)" id="activeLbl">—</div>
-          <div id="srcTag" style="margin-top:4px"><span class="source-tag src-est">LOADING</span></div>
-          <div class="chart-label" style="margin-top:5px">24H CHANGE</div>
-          <div class="chart-val" id="curChangeMeta">—</div>
-        </div>
+    <div class="card chart-card" id="chartCard">
+      <div class="yf-head">
+        <div class="yf-title"><span id="yfName">—</span> <span id="yfSym"></span><svg class="yf-star" viewBox="0 0 24 24" aria-label="On your watchlist"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg></div>
+        <div class="yf-priceRow"><span class="yf-price" id="yfPrice">—</span><span class="yf-chg flat" id="yfChg"><span id="yfDiff"></span> <span id="yfPct"></span></span></div>
+        <div class="yf-asof" id="yfAsOf">Loading…</div>
       </div>
       <div class="range-row">
         <div class="range-tabs" id="rangeTabs"></div>
-        <div class="range-chg" id="rangeChg"></div>
+        <button class="yf-expand" onclick="toggleChartFull()" title="Expand chart" aria-label="Expand chart"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </div>
       <div class="chart-wrap">
         <canvas id="priceChart"></canvas>
@@ -582,6 +585,7 @@ async function refreshStock(s, i, cgMap) {
       prevClose:d.previousClose??d.prevClose??null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
       volume:d.volume??null, avgVolume:d.avgVolume??null, marketCap:d.marketCap??null, netAssets:d.netAssets??null,
       quoteType:d.quoteType||'EQUITY',
+      regularMarketTime:d.regularMarketTime??null, exchangeTz:d.exchangeTimezoneName||null, tzAbbr:d.timezone||null, marketState:d.marketState||null,
       dividendYield:d.dividendYield??null, expenseRatio:d.expenseRatio??null,
       rsi:+(rsi+Math.random()*4).toFixed(1), fear:fearGreed,
       longName:d.name||d.label||d.longName||s.longName||s.label||'', isLive:true};
@@ -612,6 +616,7 @@ async function refreshStock(s, i, cgMap) {
     volume:(cg&&cg.total_volume)??(y&&y.volume)??null, avgVolume:null,
     marketCap:(cg&&cg.market_cap)??(y&&y.marketCap)??null, netAssets:null,
     quoteType:'CRYPTOCURRENCY', dividendYield:null, expenseRatio:null,
+    regularMarketTime:y?(y.regularMarketTime??null):null, exchangeTz:y?(y.exchangeTimezoneName||null):null, tzAbbr:y?(y.timezone||null):null, marketState:y?(y.marketState||null):null,
     rsi:+(rsi+Math.random()*5).toFixed(1), fear:fearGreed,
     longName:(cg&&cg.name)||s.longName||'', isLive:true};
   return true;
@@ -720,10 +725,10 @@ function genPriceData(s) {
   prices[prices.length-1]=s.price; return prices;
 }
 // ── CHART (Yahoo-style: real history, right-hand price scale, date axis, hover crosshair) ──
-const RANGES=[['1D','1D'],['5D','1W'],['1M','1M'],['3M','3M'],['6M','6M'],['YTD','YTD'],['1Y','1Y'],['5Y','5Y']];
+const YF_UP='#188a42', YF_DOWN='#d6002a', YF_PILL='#0b7a5f', YF_BASE='#2c3235';
+const RANGES=[['1D','1D'],['5D','1W'],['1M','1M'],['6M','6M'],['YTD','YTD'],['1Y','1Y'],['5Y','5Y'],['All','MAX']];
 let chartRange='1D', chartToken=0;
 const histCache={};
-const INTRADAY=['1D','1W'];
 
 function buildRangeTabs(){
   const box=document.getElementById('rangeTabs'); box.innerHTML='';
@@ -736,13 +741,28 @@ function buildRangeTabs(){
 }
 function chartSymbol(s){ return s.type==='crypto' ? (s.ySym || s.sym.replace('/','-')) : s.sym; }
 function setChartMsg(t){ const m=document.getElementById('chartMsg'); if(m) m.textContent=t||''; }
-function fmtAxis(v){ return v>=1000 ? v.toLocaleString(undefined,{maximumFractionDigits:0}) : v>=1 ? v.toFixed(2) : v.toFixed(4); }
-function fmtTick(ts){
-  const d=new Date(ts);
-  if(chartRange==='1D') return d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
-  if(chartRange==='1W') return d.toLocaleDateString([], {weekday:'short',day:'numeric'});
-  if(chartRange==='1Y'||chartRange==='5Y') return d.toLocaleDateString([], {month:'short',year:chartRange==='5Y'?'2-digit':undefined});
-  return d.toLocaleDateString([], {month:'short',day:'numeric'});
+function fmtNum(v){ return (v==null||isNaN(v)) ? '—' : Math.abs(v)>=1 ? v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : v.toFixed(4); }
+function fmtTrim(v){ const s=String(+v.toFixed(4)); return (s.split('.')[1]||'').length<2 ? v.toFixed(2) : s; }   // 0.5 -> "0.50", 0.4975 -> "0.4975"
+function tzFmt(ms,tz,opts,fn){
+  try { return new Date(ms)[fn]('en-US',{...opts,timeZone:tz||undefined}); }
+  catch { return new Date(ms)[fn]('en-US',opts); }
+}
+function fmtTick(ts,tz){
+  if(chartRange==='1W') return tzFmt(ts,tz,{weekday:'short',day:'numeric'},'toLocaleDateString');
+  if(chartRange==='1Y') return tzFmt(ts,tz,{month:'short'},'toLocaleDateString');
+  if(chartRange==='5Y'||chartRange==='MAX') return tzFmt(ts,tz,{year:'numeric'},'toLocaleDateString');
+  return tzFmt(ts,tz,{month:'short',day:'numeric'},'toLocaleDateString');
+}
+// Hourly (or coarser) ticks on exchange-local hour boundaries, like Yahoo's "10:00 am  11:00 am ..."
+function hourTicks(min,max,offSec){
+  const span=max-min, off=offSec*1000;
+  const steps=[30,60,120,180,240,360,720,1440].map(m=>m*60000);
+  const step=steps.find(st=>span/st<=8)||steps[steps.length-1];
+  const out=[];
+  for(let v=Math.ceil((min+off)/step)*step-off; v<=max; v+=step){
+    if(v-min>=span*0.03 && max-v>=span*0.03) out.push(v);
+  }
+  return out;
 }
 const crosshairPlugin={id:'crosshair',afterDatasetsDraw(chart){
   const act=chart.tooltip&&chart.tooltip._active;
@@ -764,93 +784,146 @@ async function initChart(idx) {
     try{
       const d=await fetchWithTimeout(`${BACKEND}/api/history/${encodeURIComponent(chartSymbol(s))}?range=${chartRange}`,35000);
       if(!d.prices||!d.prices.length) throw new Error('empty');
-      hist=histCache[key]={at:Date.now(),prices:d.prices,volumes:d.volumes||[]};
+      hist=histCache[key]={at:Date.now(),prices:d.prices,volumes:d.volumes||[],tz:d.tz||null,tzAbbr:d.tzAbbr||null,
+        gmtoffset:d.gmtoffset||0,previousClose:d.previousClose||null,tradingPeriod:d.tradingPeriod||null};
     }catch(e){
-      if(!hist){ if(token===chartToken){ if(chartInst){chartInst.destroy();chartInst=null;} setChartMsg('Chart unavailable for this symbol'); document.getElementById('rangeChg').textContent=''; } return; }
+      if(!hist){ if(token===chartToken){ if(chartInst){chartInst.destroy();chartInst=null;} setChartMsg('Chart unavailable for this symbol'); } return; }
     }
   }
   if(token!==chartToken) return;
-  drawChart(s,hist.prices,hist.volumes);
+  drawChart(s,hist);
 }
 
-function drawChart(s,pts,volumes){
+// Yahoo Finance look: time axis, previous-close dashed line, fill between price and previous close,
+// price tag on the right axis, red/green end dot, light volume bars at the bottom
+function drawChart(s,h){
   setChartMsg('');
+  const pts=h.prices, volumes=h.volumes;
   const ctx=document.getElementById('priceChart').getContext('2d');
   if(chartInst) chartInst.destroy();
-  const labels=pts.map(p=>p[0]), data=pts.map(p=>p[1]);
-  const first=data[0], last=data[data.length-1];
-  const up=last>=first, col=up?'#00a86b':'#e03131';
-  const grad=ctx.createLinearGradient(0,0,0,240);
-  grad.addColorStop(0,up?'rgba(0,168,107,0.22)':'rgba(224,49,49,0.20)'); grad.addColorStop(1,'rgba(255,255,255,0)');
+  const is1D=chartRange==='1D', tz=h.tz||null;
+  const stamps=pts.map(p=>p[0]), n=pts.length;
+  const data=pts.map((p,i)=>({x:is1D?p[0]:i,y:p[1]}));
+  const first=data[0].y, last=data[n-1].y;
+  const base=is1D?(h.previousClose||s.prevClose||first):first;     // 1D is measured against the previous close
+  const up=last>=base, col=up?YF_UP:YF_DOWN, rgb=up?'24,138,66':'214,0,42';
 
-  const chg=first?((last-first)/first*100):0;
-  const rc=document.getElementById('rangeChg');
-  rc.textContent=`${chg>=0?'+':''}${chg.toFixed(2)}%`; rc.style.color=up?'var(--green)':'var(--red)';
+  // 1D axis spans the whole trading session (only if the session matches the data we got)
+  const tp=h.tradingPeriod;
+  const tpOk=is1D&&tp&&stamps[0]>=tp.start-3600e3&&stamps[n-1]<=tp.end+3600e3;
+  const xMin=is1D?(tpOk?Math.min(tp.start,stamps[0]):stamps[0]):0;
+  const xMax=is1D?(tpOk?Math.max(tp.end,stamps[n-1]):stamps[n-1]):Math.max(n-1,1);
 
-  const vols=(volumes&&volumes.length===data.length)?volumes:[]; const maxV=vols.length?Math.max(0,...vols):0;
-  const datasets=[{label:'Price',data,borderColor:col,borderWidth:1.8,pointRadius:0,pointHoverRadius:4,order:0,
-    pointHoverBackgroundColor:col,fill:true,backgroundColor:grad,tension:0.15}];
-  if(chartRange==='1D' && s.prevClose) datasets.push({label:'Prev close',data:Array(data.length).fill(s.prevClose),
-    borderColor:'rgba(120,130,150,0.7)',borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false});
-  if(['6M','YTD','1Y','5Y'].includes(chartRange) && s.ath>0) datasets.push({label:'52W High',data:Array(data.length).fill(s.ath),
-    borderColor:'rgba(0,82,255,0.55)',borderWidth:1.2,borderDash:[5,4],pointRadius:0,fill:false});
+  const ys=data.map(d=>d.y); let lo=Math.min(...ys), hi=Math.max(...ys);
+  if(is1D&&base){ lo=Math.min(lo,base); hi=Math.max(hi,base); }
+  if(lo===hi){ const pad=Math.abs(lo)*0.005||0.01; lo-=pad; hi+=pad; }
 
-  if(maxV>0) datasets.push({type:'bar',label:'Volume',data:vols,yAxisID:'yv',order:2,borderWidth:0,barPercentage:1,categoryPercentage:1,
-    backgroundColor:up?'rgba(0,168,107,0.28)':'rgba(224,49,49,0.25)'});
-  const mono='ui-monospace, SFMono-Regular, Menlo, monospace';
+  const vols=(volumes&&volumes.length===n)?volumes:[]; const maxV=vols.length?Math.max(0,...vols):0;
+  const datasets=[{label:'Price',data,parsing:false,borderColor:col,borderWidth:1.6,tension:0,order:0,
+    pointRadius:c=>c.dataIndex===n-1?4:0,pointHoverRadius:4,pointBackgroundColor:col,pointBorderColor:col,
+    fill:is1D?{target:{value:base}}:'start',
+    backgroundColor:c=>{
+      const ch=c.chart,a=ch.chartArea; if(!a||!ch.scales.y) return 'transparent';
+      const yb=is1D?ch.scales.y.getPixelForValue(base):a.bottom;
+      const edge=is1D?(up?a.top:a.bottom):a.top;
+      const g=ch.ctx.createLinearGradient(0,yb,0,edge);
+      g.addColorStop(0,`rgba(${rgb},0.04)`); g.addColorStop(1,`rgba(${rgb},0.34)`);
+      return g;
+    }}];
+  if(maxV>0) datasets.push({type:'bar',label:'Volume',data:vols.map((v,i)=>({x:data[i].x,y:v})),parsing:false,
+    yAxisID:'yv',order:2,borderWidth:0,backgroundColor:'rgba(120,130,150,0.35)',barPercentage:1,categoryPercentage:1});
+
+  // dashed lines + right-axis price tags
+  const overlay={id:'yfOverlay',afterDatasetsDraw(chart){
+    const c=chart.ctx,a=chart.chartArea,y=chart.scales.y; if(!y) return;
+    const dash=(yy,color)=>{c.save();c.beginPath();c.setLineDash([4,4]);c.lineWidth=1;c.strokeStyle=color;c.moveTo(a.left,yy);c.lineTo(a.right,yy);c.stroke();c.restore();};
+    const pill=(yy,text,bg)=>{
+      c.save(); c.font='700 11px -apple-system,"Segoe UI",Roboto,sans-serif';
+      const w=c.measureText(text).width+14,hgt=20,x=chart.width-w-1;
+      c.fillStyle=bg; c.beginPath(); if(c.roundRect) c.roundRect(x,yy-hgt/2,w,hgt,3); else c.rect(x,yy-hgt/2,w,hgt); c.fill();
+      c.fillStyle='#fff'; c.textBaseline='middle'; c.textAlign='center'; c.fillText(text,x+w/2,yy); c.restore();
+    };
+    const yl=y.getPixelForValue(last);
+    if(is1D&&base){
+      const yb=y.getPixelForValue(base);
+      dash(yb,'#4b5058');
+      pill(Math.abs(yb-yl)<22?(yb<=yl?yl-22:yl+22):yb,fmtTrim(base),YF_BASE);
+    }
+    dash(yl,YF_PILL);
+    pill(yl,fmtNum(last),YF_PILL);
+  }};
+
+  const mono='-apple-system,"Segoe UI",Roboto,sans-serif';
   chartInst=new Chart(ctx,{
-    type:'line', data:{labels,datasets}, plugins:[crosshairPlugin],
+    type:'line', data:{datasets}, plugins:[crosshairPlugin,overlay],
     options:{
-      responsive:true, maintainAspectRatio:false, animation:{duration:300},
-      interaction:{mode:'index',intersect:false},
-      layout:{padding:{right:2,top:6}},
+      responsive:true, maintainAspectRatio:false, animation:false,
+      interaction:{mode:'index',axis:'x',intersect:false},
+      layout:{padding:{right:2,top:8}},
       plugins:{
         legend:{display:false},
         tooltip:{displayColors:false,filter:i=>i.datasetIndex===0,
           callbacks:{
-            title:items=>{const d=new Date(labels[items[0].dataIndex]);
-              return INTRADAY.includes(chartRange)
-                ? d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
-                : d.toLocaleDateString([], {year:'numeric',month:'short',day:'numeric'});},
-            label:c=>{const v=vols[c.dataIndex]; return v?[fmtPrice(c.raw),'Vol '+fmtBig(v)]:fmtPrice(c.raw);}
+            title:items=>{const t=stamps[items[0].dataIndex];
+              return (is1D||chartRange==='1W')
+                ? tzFmt(t,tz,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'},'toLocaleString')
+                : tzFmt(t,tz,{year:'numeric',month:'short',day:'numeric'},'toLocaleDateString');},
+            label:c=>{const v=vols[c.dataIndex]; const p=fmtNum(c.raw.y); return v?[p,'Vol '+fmtBig(v)]:p;}
           }}
       },
       scales:{
-        x:{grid:{display:false},border:{display:false},
-          ticks:{maxTicksLimit:5,maxRotation:0,autoSkip:true,color:'#8a93a6',font:{size:10,family:mono},
-            callback:function(v){return fmtTick(this.getLabelForValue(v));}}},
-        yv:{display:false,position:'left',min:0,max:(maxV||1)*4,grid:{display:false}},
-        y:{position:'right',grace:'5%',grid:{color:'rgba(100,110,130,0.12)'},border:{display:false},
-          ticks:{maxTicksLimit:6,color:'#8a93a6',font:{size:10,family:mono},callback:v=>fmtAxis(v)}}
+        x:{type:'linear',min:xMin,max:xMax,grid:{display:false},border:{display:false},
+          afterBuildTicks:sc=>{
+            if(is1D){ sc.ticks=hourTicks(sc.min,sc.max,h.gmtoffset||0).map(v=>({value:v})); }
+            else{ const k=5,span=sc.max-sc.min; sc.ticks=Array.from({length:k},(_,i)=>({value:Math.round(sc.min+span*(i+0.5)/k)})); }
+          },
+          ticks:{autoSkip:false,maxRotation:0,color:'#5b6370',font:{size:11,family:mono},
+            callback:v=>is1D?tzFmt(v,tz,{hour:'numeric',minute:'2-digit'},'toLocaleTimeString').toLowerCase()
+                            :fmtTick(stamps[Math.max(0,Math.min(n-1,Math.round(v)))],tz)}},
+        yv:{display:false,position:'left',min:0,max:(maxV||1)*6,grid:{display:false}},
+        y:{position:'right',suggestedMin:lo,suggestedMax:hi,grace:'6%',grid:{color:'rgba(100,110,130,0.18)'},border:{display:false},
+          ticks:{maxTicksLimit:6,color:'#5b6370',font:{size:11,family:mono},callback:v=>fmtNum(v)}}
       }
     }
   });
 }
 
+function toggleChartFull(){
+  const c=document.getElementById('chartCard'); c.classList.toggle('full');
+  document.body.style.overflow=c.classList.contains('full')?'hidden':'';
+  setTimeout(()=>{ if(chartInst) chartInst.resize(); },60);
+}
+document.addEventListener('keydown',e=>{ const c=document.getElementById('chartCard'); if(e.key==='Escape'&&c&&c.classList.contains('full')) toggleChartFull(); });
+
 // ── DISPLAY ────────────────────────────────────
+// "Keppel Infrastructure Trust (A7RU.SI)  /  0.4950  -0.0050 (-1.00%)  /  At close: 5:10:51 pm SGT"
+function fmtAsOf(d) {
+  if(!d.isLive) return 'Estimated — live data unavailable';
+  const t=d.regularMarketTime; if(!t) return `Updated: ${new Date().toLocaleTimeString()}`;
+  const tz=d.exchangeTz||null, abbr=d.tzAbbr||'';
+  const time=tzFmt(t,tz,{hour:'numeric',minute:'2-digit',second:'2-digit'},'toLocaleTimeString').toLowerCase();
+  if(d.marketState==='OPEN') return `As of ${time} ${abbr}. Market open.`.replace(' .','.');
+  const day=ms=>tzFmt(ms,tz,{year:'numeric',month:'numeric',day:'numeric'},'toLocaleDateString');
+  const datePart=day(t)!==day(Date.now())?tzFmt(t,tz,{month:'short',day:'numeric'},'toLocaleDateString')+' at ':'';
+  return `At close: ${datePart}${time} ${abbr}`.trim();
+}
+function renderYfHeader(d) {
+  document.getElementById('yfName').textContent=d.longName||d.label||d.sym;
+  document.getElementById('yfSym').textContent=`(${chartSymbol(d)})`;
+  document.getElementById('yfPrice').textContent=fmtNum(d.price);
+  let prev=d.prevClose; if(!(prev>0)) prev=d.price/(1+(d.change24||0)/100);
+  const diff=d.price-prev, pct=prev?diff/prev*100:0;
+  const dec=Math.abs(d.price)>=1?2:4;
+  const flat=Math.abs(pct)<0.005, sign=flat?'':diff>0?'+':'-';
+  document.getElementById('yfChg').className='yf-chg '+(flat?'flat':diff>0?'up':'down');
+  document.getElementById('yfDiff').textContent=`${sign}${Math.abs(diff).toFixed(dec)}`;
+  document.getElementById('yfPct').textContent=`(${sign}${Math.abs(pct).toFixed(2)}%)`;
+  document.getElementById('yfAsOf').textContent=fmtAsOf(d);
+}
+
 function updateDisplay(d) {
   if(!d||!d.price) return;
-  document.getElementById('curPrice').textContent = fmtPrice(d.price);
-  document.getElementById('activeLbl').textContent = d.sym;
-
-  // 24h change — NO MORE NULL
-  const c = d.change24 || 0;
-  const changeEl = document.getElementById('curChange');
-  if (c > 0.01) {
-    changeEl.className='price-change pos';
-    changeEl.textContent=`▲ +${c.toFixed(2)}% 24h`;
-  } else if (c < -0.01) {
-    changeEl.className='price-change neg';
-    changeEl.textContent=`▼ ${c.toFixed(2)}% 24h`;
-  } else {
-    changeEl.className='price-change flat';
-    changeEl.textContent='— 0.00% 24h';
-  }
-  document.getElementById('curChangeMeta').textContent = c > 0.01 ? `+${c.toFixed(2)}%` : c < -0.01 ? `${c.toFixed(2)}%` : '0.00%';
-  document.getElementById('curChangeMeta').style.color = c > 0.01 ? 'var(--green)' : c < -0.01 ? 'var(--red)' : 'var(--muted)';
-
-  document.getElementById('srcTag').innerHTML = `<span class="source-tag ${d.isLive?'src-live':'src-est'}">${d.isLive?(d.type==='stock'?'● LIVE (Render)':'● LIVE (CoinGecko)'):'◌ ESTIMATED'}</span>`;
-  document.getElementById('lastUpd').textContent = d.isLive ? `Updated: ${new Date().toLocaleTimeString()}` : '';
+  renderYfHeader(d);
 
   // ATH info
   if (d.ath && d.ath > 0) {
