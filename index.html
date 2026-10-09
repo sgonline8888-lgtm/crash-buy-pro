@@ -173,6 +173,7 @@ input[type=range]{flex:2;accent-color:var(--accent)}
 .stock-grid{display:flex;flex-direction:column;gap:7px}
 .grp-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);font-family:var(--fm);font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--text)}
 .grp-head:first-child{margin-top:2px}
+.grp-head.sel{color:var(--accent)}
 .grp-count{background:var(--accent-dim);color:var(--accent);border-radius:10px;padding:1px 8px;font-size:10px}
 .grp-chev{margin-left:auto;color:var(--muted);transition:transform .15s}
 .grp-head.collapsed .grp-chev{transform:rotate(-90deg)}
@@ -834,13 +835,12 @@ function drawChart(s,h){
 
   const vols=(volumes&&volumes.length===n)?volumes:[]; const maxV=vols.length?Math.max(0,...vols):0;
   const datasets=[{label:'Price',data,parsing:false,yAxisID:'y',borderColor:col,borderWidth:1.6,tension:0,order:0,fill:false,
-    pointRadius:c=>c.dataIndex===n-1?4:0,pointHoverRadius:4,pointBackgroundColor:col,pointBorderColor:col,
-    // 1D: the line is green while above the previous close and red while below it (like Yahoo)
-    segment:is1D?{borderColor:c=>data[c.p1DataIndex].y>=base?YF_UP:YF_DOWN}:undefined}];
+    pointRadius:c=>c.dataIndex===n-1?4:0,pointHoverRadius:4,pointBackgroundColor:col,pointBorderColor:col}];
   if(maxV>0) datasets.push({type:'bar',label:'Volume',data:vols.map((v,i)=>({x:data[i].x,y:v})),parsing:false,
     yAxisID:'yv',order:2,borderWidth:0,backgroundColor:'rgba(120,130,150,0.35)',barPercentage:1,categoryPercentage:1});
 
-  // Fill between the price line and the previous close: green above it, red below it (gradient darker away from the line)
+  // Fill between the price line and the previous close, in ONE colour (green if the day is up, red if down); darker away from the baseline
+  const mainRgb=up?UP_RGB:DOWN_RGB;
   const fillPlugin={id:'yfFill',beforeDatasetsDraw(chart){
     const meta=chart.getDatasetMeta(0), pts=meta&&meta.data, a=chart.chartArea, y=chart.scales.y;
     if(!pts||pts.length<2||!y) return;
@@ -855,8 +855,8 @@ function drawChart(s,h){
       const g=c.createLinearGradient(0,yb,0,far); g.addColorStop(0,`rgba(${rgb},0.05)`); g.addColorStop(1,`rgba(${rgb},0.38)`);
       c.fillStyle=g; trace(); c.fill(); c.restore();
     };
-    if(is1D){ paint(a.top,yb,UP_RGB,a.top); paint(yb,a.bottom,DOWN_RGB,a.bottom); }
-    else paint(a.top,a.bottom,up?UP_RGB:DOWN_RGB,a.top);
+    if(is1D){ paint(a.top,yb,mainRgb,a.top); paint(yb,a.bottom,mainRgb,a.bottom); }
+    else paint(a.top,a.bottom,mainRgb,a.top);
   }};
 
   // dashed lines + right-axis price tags
@@ -1115,13 +1115,8 @@ function stockRegion(s) {
   if(/[.=]/.test(sym)) return 'others';
   return 'usa';
 }
-let collapsedGroups={};
-try { collapsedGroups=JSON.parse(localStorage.getItem('cbGroupsCollapsed')||'{}')||{}; } catch {}
-function toggleGroup(k) {
-  collapsedGroups[k]=!collapsedGroups[k];
-  try { localStorage.setItem('cbGroupsCollapsed',JSON.stringify(collapsedGroups)); } catch {}
-  buildStockGrid();
-}
+let groupFilter=null;     // null = show all groups; otherwise only that group's stocks are shown
+function toggleGroup(k) { groupFilter = (groupFilter===k) ? null : k; buildStockGrid(); }
 
 function buildStockGrid() {
   const g=document.getElementById('stockGrid'); g.innerHTML='';
@@ -1198,11 +1193,13 @@ function buildStockGrid() {
   STOCK_GROUPS.forEach(([k,label])=>{
     const cards=buckets[k]; if(!cards.length) return;
     const head=document.createElement('div');
-    head.className='grp-head'+(collapsedGroups[k]?' collapsed':'');
+    const hide=!!groupFilter&&groupFilter!==k;
+    head.className='grp-head'+(hide?' collapsed':'')+(groupFilter===k?' sel':'');
+    head.title=groupFilter===k?'Click to show all groups':`Click to show only ${label}`;
     head.onclick=()=>toggleGroup(k);
     head.innerHTML=`<span>${label}</span><span class="grp-count">${cards.length}</span><span class="grp-chev">▾</span>`;
     const body=document.createElement('div');
-    body.className='grp-body'+(collapsedGroups[k]?' hidden':'');
+    body.className='grp-body'+(hide?' hidden':'');
     cards.forEach(c=>body.appendChild(c));
     g.appendChild(head); g.appendChild(body);
   });
