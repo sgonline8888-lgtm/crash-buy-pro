@@ -506,6 +506,8 @@ function fmtPrice(p) {
   if (p >= 1) return '$' + p.toFixed(2);
   return '$' + p.toFixed(4);
 }
+// a label that is just the ticker (e.g. "G3B.SI") is not a company name
+function realNameOf(v,sym) { return (v && String(v).trim().toUpperCase()!==String(sym).toUpperCase()) ? String(v).trim() : ''; }
 function fmtBig(n) {
   if (n==null || isNaN(n)) return '—';
   const a=Math.abs(n);
@@ -604,7 +606,7 @@ async function refreshStock(s, i, cgMap) {
       regularMarketTime:d.regularMarketTime??null, exchangeTz:d.exchangeTimezoneName||null, tzAbbr:d.timezone||null, marketState:d.marketState||null,
       dividendYield:d.dividendYield??null, expenseRatio:d.expenseRatio??null,
       rsi:+(rsi+Math.random()*4).toFixed(1), fear:fearGreed,
-      longName:d.name||d.label||d.longName||s.longName||s.label||'', isLive:true};
+      longName:realNameOf(d.name,s.sym)||realNameOf(d.label,s.sym)||realNameOf(d.longName,s.sym)||realNameOf(s.longName,s.sym)||realNameOf(s.label,s.sym)||'', isLive:true};
     return true;
   }
 
@@ -745,7 +747,7 @@ function genPriceData(s) {
 const YF_UP='#0a7d5e', YF_DOWN='#d6002a', YF_PILL='#0a7d5e', YF_BASE='#2c3235';
 const UP_RGB='10,125,94', DOWN_RGB='214,0,42';
 const RANGES=[['1D','1D'],['5D','1W'],['1M','1M'],['6M','6M'],['YTD','YTD'],['1Y','1Y'],['5Y','5Y'],['All','MAX']];
-let chartRange='1D', chartToken=0;
+let chartRange='1D', chartToken=0, liveBase=null;
 const histCache={};
 
 function buildRangeTabs(){
@@ -838,16 +840,15 @@ function drawChart(s,h){
 
   const vols=(volumes&&volumes.length===n)?volumes:[]; const maxV=vols.length?Math.max(0,...vols):0;
   const datasets=[{label:'Price',data,parsing:false,yAxisID:'y',borderColor:col,borderWidth:1.6,tension:0,order:0,fill:false,
-    pointRadius:c=>c.dataIndex===n-1?4:0,pointHoverRadius:4,pointBackgroundColor:col,pointBorderColor:col}];
+    pointRadius:c=>c.dataIndex===c.dataset.data.length-1?4:0,pointHoverRadius:4,pointBackgroundColor:col,pointBorderColor:col}];
   if(maxV>0) datasets.push({type:'bar',label:'Volume',data:vols.map((v,i)=>({x:data[i].x,y:v})),parsing:false,
     yAxisID:'yv',order:2,borderWidth:0,backgroundColor:'rgba(120,130,150,0.35)',barPercentage:1,categoryPercentage:1});
 
   // Fill between the price line and the previous close, in ONE colour (green if the day is up, red if down); darker away from the baseline
-  const mainRgb=up?UP_RGB:DOWN_RGB;
   const fillPlugin={id:'yfFill',beforeDatasetsDraw(chart){
     const meta=chart.getDatasetMeta(0), pts=meta&&meta.data, a=chart.chartArea, y=chart.scales.y;
     if(!pts||pts.length<2||!y) return;
-    const c=chart.ctx;
+    const c=chart.ctx, mainRgb=chart.data.datasets[0].borderColor===YF_UP?UP_RGB:DOWN_RGB;
     const yb=is1D?Math.min(Math.max(y.getPixelForValue(base),a.top),a.bottom):a.bottom;
     const trace=()=>{ c.beginPath(); let started=false,lx=0;
       for(const p of pts){ if(p.skip) continue; if(!started){c.moveTo(p.x,yb);started=true;} c.lineTo(p.x,p.y); lx=p.x; }
@@ -872,16 +873,17 @@ function drawChart(s,h){
       c.fillStyle=bg; c.beginPath(); if(c.roundRect) c.roundRect(x,yy-hgt/2,w,hgt,3); else c.rect(x,yy-hgt/2,w,hgt); c.fill();
       c.fillStyle='#fff'; c.textBaseline='middle'; c.textAlign='center'; c.fillText(text,x+w/2,yy); c.restore();
     };
-    const yl=y.getPixelForValue(last);
+    const dd=chart.data.datasets[0].data, lastNow=dd[dd.length-1].y, yl=y.getPixelForValue(lastNow);
     if(is1D&&base){
       const yb=y.getPixelForValue(base);
       dash(yb,'#4b5058');
       pill(Math.abs(yb-yl)<22?(yb<=yl?yl-22:yl+22):yb,fmtTrim(base),YF_BASE);
     }
     dash(yl,YF_PILL);
-    pill(yl,fmtNum(last),YF_PILL);
+    pill(yl,fmtNum(lastNow),YF_PILL);
   }};
 
+  liveBase={is1D,base};
   const mono='-apple-system,"Segoe UI",Roboto,sans-serif';
   chartInst=new Chart(ctx,{
     type:'line', data:{datasets}, plugins:[crosshairPlugin,fillPlugin,overlay],
@@ -941,7 +943,7 @@ function fmtAsOf(d) {
   return `At close: ${datePart}${time} ${zone}`.trim();
 }
 function renderYfHeader(d) {
-  document.getElementById('yfName').textContent=d.longName||d.label||d.sym;
+  document.getElementById('yfName').textContent=realNameOf(d.longName,d.sym)||realNameOf(d.label,d.sym)||d.sym;
   document.getElementById('yfSym').textContent=`(${chartSymbol(d)})`;
   document.getElementById('yfExch').textContent=[d.exchange,d.currency].filter(Boolean).join(' • ');
   document.getElementById('yfPrice').textContent=fmtNum(d.price);
@@ -1151,7 +1153,7 @@ function buildStockGrid() {
       athHtml=`<div class="sc-ath"><div class="sc-ath-val" style="color:var(--muted2)">52W H —</div></div>`;
     }
 
-    const displayName = s.label||(s.longName||'');
+    const displayName = realNameOf(s.label,s.sym)||realNameOf(s.longName,s.sym)||'';
 
     // Extra stats rows (shown below main card row)
     const prevCloseHtml = s.prevClose ? `<span>Prev Close <b>${fmtPrice(s.prevClose)}</b></span>` : '';
@@ -1219,7 +1221,7 @@ async function addStock() {
   const sym=isCrypto?(labelIn.toUpperCase()||input.toUpperCase()):input.toUpperCase();
   const cgId=isCrypto?input:null;
   const type=isCrypto?'crypto':'stock';
-  const label=labelIn||sym;
+  const label=labelIn;                      // blank = let the server look up the real company name
   if(stocks.find(s=>s.sym===sym)){setBanner('warn',`⚠ ${sym} already in watchlist.`);setTimeout(hideBanner,3000);return;}
   setBanner('warn',`Adding ${sym}...`);
   try {
@@ -1407,6 +1409,63 @@ async function init() {
 
 init();
 setInterval(fetchAllPrices, 60000);
+
+// ── LIVE TICKS: one batched quote call for the whole watchlist every 10s (pauses while the tab is hidden) ──
+const LIVE_MS=10000; let liveBusy=false;
+const liveSym=s=>s.type==='crypto'?(s.ySym||s.sym.replace('/','-')):s.sym;
+function applyQuote(i,q) {
+  const s=stocks[i], price=q.price; if(price==null) return;
+  const prev=q.previousClose??s.prevClose;
+  let c;
+  if(s.type==='crypto'&&s.price>0) c=((1+(s.change24||0)/100)*price/s.price-1)*100;   // keep CoinGecko's rolling-24h baseline
+  else c=q.changePct!=null?q.changePct:(prev?(price-prev)/prev*100:(s.change24||0));
+  const ath=q.fiftyTwoWeekHigh||s.ath||0, atl=q.fiftyTwoWeekLow||s.atl||0;
+  stocks[i]={...s,price,change24:c,drop:c<0?+Math.abs(c).toFixed(2):0,ath,atl,
+    athDrop:ath>0?+(((ath-price)/ath)*100).toFixed(1):s.athDrop,
+    prevClose:prev??s.prevClose,dayHigh:q.dayHigh??s.dayHigh,dayLow:q.dayLow??s.dayLow,volume:q.volume??s.volume,
+    avgVolume:q.avgVolume??s.avgVolume,
+    marketCap:s.type==='crypto'?s.marketCap:(q.marketCap??s.marketCap),netAssets:q.netAssets??s.netAssets,
+    regularMarketTime:q.regularMarketTime??s.regularMarketTime,marketState:q.marketState??s.marketState,
+    tzAbbr:q.timezone||s.tzAbbr,exchangeTz:q.exchangeTimezoneName||s.exchangeTz,
+    exchange:s.exchange||q.exchange||null,currency:s.currency||q.currency||null,
+    longName:realNameOf(s.longName,s.sym)||realNameOf(q.name,s.sym)||'',isLive:true};
+}
+// move the open 1D chart with the live price (in place, so hovering isn't interrupted)
+function liveChartTick(s) {
+  if(chartRange!=='1D'||!chartInst||!s||!s.price) return;
+  const t=s.regularMarketTime||Date.now();
+  const hist=histCache[s.sym+'|1D'];
+  if(hist&&hist.prices.length){
+    const P=hist.prices,V=hist.volumes,last=P[P.length-1];
+    if(t-last[0]>=60000){P.push([t,s.price]); if(V.length===P.length-1) V.push(0);} else last[1]=s.price;
+  }
+  const ds=chartInst.data.datasets[0], pts=ds.data, lp=pts[pts.length-1]; if(!lp) return;
+  if(t-lp.x>=60000){ pts.push({x:t,y:s.price}); const vd=chartInst.data.datasets[1]; if(vd) vd.data.push({x:t,y:0}); }
+  else lp.y=s.price;
+  if(liveBase&&liveBase.is1D&&liveBase.base){
+    const col=s.price>=liveBase.base?YF_UP:YF_DOWN; ds.borderColor=col; ds.pointBackgroundColor=col; ds.pointBorderColor=col;
+  }
+  chartInst.update('none');
+}
+async function liveTick() {
+  if(liveBusy||document.hidden||!stocks.length) return;
+  liveBusy=true;
+  try {
+    const syms=[...new Set(stocks.map(liveSym))];
+    const r=await fetchWithTimeout(`${BACKEND}/api/quotes?symbols=${encodeURIComponent(syms.join(','))}`,8000);
+    const qs=(r&&r.quotes)||{}; let touched=false;
+    stocks.forEach((s,i)=>{ const q=qs[liveSym(s)]; if(q&&q.price!=null){ applyQuote(i,q); touched=true; } });
+    if(touched){
+      const a=stocks[activeIdx];
+      if(a){ updateDisplay(a); liveChartTick(a); }
+      const ae=document.activeElement;
+      if(!(ae&&ae.tagName==='SELECT')) buildStockGrid();        // don't close a dropdown the user has open
+      updatePortfolio();
+    }
+  } catch {} finally { liveBusy=false; }
+}
+setInterval(liveTick, LIVE_MS);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveTick(); });
 </script>
 </body>
 </html>
