@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CrashBuy Pro</title>
+<meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -277,6 +278,14 @@ input[type=range]{flex:2;accent-color:var(--accent)}
 
 .save-toast{position:fixed;bottom:20px;right:20px;background:#0f1117;color:#fff;font-family:var(--fm);font-size:11px;padding:8px 14px;border-radius:8px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999}
 .save-toast.show{opacity:1}
+
+/* LOGIN GATE */
+.login-overlay{position:fixed;inset:0;z-index:1000;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px}
+.login-overlay.show{display:flex}
+.login-box{width:100%;max-width:340px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
+.login-box .logo{text-align:center;margin-bottom:18px}
+.login-err{min-height:16px;font-family:var(--fm);font-size:11px;color:var(--red);margin:4px 0 8px;font-weight:700}
+.login-note{font-family:var(--fm);font-size:10px;color:var(--muted2);text-align:center;margin-top:10px;line-height:1.6}
 </style>
 </head>
 <body>
@@ -285,6 +294,7 @@ input[type=range]{flex:2;accent-color:var(--accent)}
     <div class="logo">CRASH<span>BUY</span> PRO<span class="logo-badge">PERSISTENT</span></div>
     <div class="header-right">
       <button class="refresh-btn" onclick="fetchAllPrices()">↻ REFRESH</button>
+      <button class="refresh-btn" onclick="logout()" title="Sign out of this device">LOGOUT</button>
       <div class="status-pill"><div class="dot loading" id="statusDot"></div><span id="statusText">LOADING...</span></div>
     </div>
   </div>
@@ -473,6 +483,17 @@ input[type=range]{flex:2;accent-color:var(--accent)}
 </div>
 <div class="save-toast" id="toast"></div>
 
+<div class="login-overlay" id="loginOverlay">
+  <form class="login-box" onsubmit="doLogin(event)">
+    <div class="logo">CRASH<span>BUY</span> PRO</div>
+    <div class="form-row"><div class="form-label">Password</div>
+      <input class="form-input" type="password" id="loginPw" autocomplete="current-password" placeholder="Enter password" autofocus></div>
+    <div class="login-err" id="loginErr"></div>
+    <button class="wide-btn wb-solid" type="submit" id="loginBtn" style="margin-top:0">SIGN IN</button>
+    <div class="login-note">Private dashboard. First sign-in may take ~30s while the server wakes up.</div>
+  </form>
+</div>
+
 <script>
 // Diagnostic: surface any script error on the page instead of hanging silently on "Loading..."
 window.addEventListener('error', function(e){
@@ -498,6 +519,49 @@ let fearGreed = 50;
 let stocks = [];
 let portfolio = [];
 let saveTimer = null;
+
+// ── AUTH ───────────────────────────────────────
+// Every request to the backend carries a signed token; the password itself is never stored here.
+let AUTH_TOKEN = '';
+try { AUTH_TOKEN = localStorage.getItem('cbp_token') || ''; } catch {}
+const _rawFetch = window.fetch.bind(window);
+window.fetch = async (url, opts = {}) => {
+  if (typeof url === 'string' && url.startsWith(BACKEND + '/api/') && !url.startsWith(BACKEND + '/api/login')) {
+    const h = new Headers(opts.headers || {});
+    if (AUTH_TOKEN) h.set('Authorization', 'Bearer ' + AUTH_TOKEN);
+    const r = await _rawFetch(url, { ...opts, headers: h });
+    if (r.status === 401) { clearToken(); showLogin('Session expired — please sign in again.'); }
+    return r;
+  }
+  return _rawFetch(url, opts);
+};
+function clearToken() { AUTH_TOKEN = ''; try { localStorage.removeItem('cbp_token'); } catch {} }
+function showLogin(msg) {
+  document.getElementById('loginOverlay').classList.add('show');
+  document.getElementById('loginErr').textContent = msg || '';
+  setTimeout(() => document.getElementById('loginPw').focus(), 50);
+}
+function logout() { clearToken(); stocks = []; portfolio = []; showLogin(''); }
+async function doLogin(e) {
+  e.preventDefault();
+  const pw = document.getElementById('loginPw').value;
+  const btn = document.getElementById('loginBtn'), err = document.getElementById('loginErr');
+  if (!pw) return;
+  btn.disabled = true; btn.textContent = 'SIGNING IN…'; err.textContent = '';
+  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 45000);
+  try {
+    const r = await _rawFetch(`${BACKEND}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }), signal: ctrl.signal });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.token) throw new Error(d.error || ('HTTP ' + r.status));
+    AUTH_TOKEN = d.token;
+    try { localStorage.setItem('cbp_token', AUTH_TOKEN); } catch {}
+    document.getElementById('loginPw').value = '';
+    document.getElementById('loginOverlay').classList.remove('show');
+    init();
+  } catch (ex) {
+    err.textContent = ex.name === 'AbortError' ? 'Server is slow to wake up — try again.' : ex.message;
+  } finally { clearTimeout(timer); btn.disabled = false; btn.textContent = 'SIGN IN'; }
+}
 
 // ── UTILS ──────────────────────────────────────
 function fmtPrice(p) {
@@ -642,6 +706,7 @@ async function refreshStock(s, i, cgMap) {
 }
 
 async function fetchAllPrices() {
+  if (!AUTH_TOKEN) { showLogin(); return; }
   setStatus('loading','UPDATING...');
   setBanner('warn','Fetching live prices...');
   try { fearGreed = await fetchFearGreed(); } catch {}
@@ -1407,8 +1472,8 @@ async function init() {
   await fetchAllPrices();
 }
 
-init();
-setInterval(fetchAllPrices, 60000);
+if (AUTH_TOKEN) init(); else showLogin();
+setInterval(() => { if (AUTH_TOKEN) fetchAllPrices(); }, 60000);
 
 // ── LIVE TICKS: one batched quote call for the whole watchlist every 10s (pauses while the tab is hidden) ──
 const LIVE_MS=10000; let liveBusy=false;
@@ -1448,7 +1513,7 @@ function liveChartTick(s) {
   chartInst.update('none');
 }
 async function liveTick() {
-  if(liveBusy||document.hidden||!stocks.length) return;
+  if(liveBusy||document.hidden||!stocks.length||!AUTH_TOKEN) return;
   liveBusy=true;
   try {
     const syms=[...new Set(stocks.map(liveSym))];
