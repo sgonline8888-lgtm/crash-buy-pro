@@ -187,6 +187,7 @@ input[type=range]{flex:2;accent-color:var(--accent)}
 .sc-stats-row{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;padding-top:7px;border-top:1px solid var(--border);font-size:11px;font-family:var(--fm);color:var(--muted)}
 .sc-stats-row b{color:var(--text);font-weight:700}
 .sc-stats-row span{white-space:nowrap}
+.sc-remarks{margin-top:5px;font-size:11px;font-style:italic;color:var(--muted);line-height:1.4}
 .sc-main{display:grid;align-items:center;gap:8px 12px;grid-template-columns:minmax(0,1fr) auto auto auto auto;grid-template-areas:"left price ath score act"}
 .sc-left{grid-area:left}
 .sc-pricebox{grid-area:price;text-align:right}
@@ -668,9 +669,11 @@ async function refreshStock(s, i, cgMap) {
       quoteType:d.quoteType||'EQUITY',
       exchange:d.exchange||null, currency:d.currency||null,
       regularMarketTime:d.regularMarketTime??null, exchangeTz:d.exchangeTimezoneName||null, tzAbbr:d.timezone||null, marketState:d.marketState||null,
-      dividendYield:d.dividendYield??null, expenseRatio:d.expenseRatio??null,
+      dividendYield:d.dividendYield??null, expenseRatio:d.expenseRatio??null, remarks:d.remarks||s.remarks||null,
       rsi:+(rsi+Math.random()*4).toFixed(1), fear:fearGreed,
-      longName:realNameOf(d.name,s.sym)||realNameOf(d.label,s.sym)||realNameOf(d.longName,s.sym)||realNameOf(s.longName,s.sym)||realNameOf(s.label,s.sym)||'', isLive:true};
+      longName:(()=>{const n=realNameOf(d.name,s.sym)||realNameOf(d.label,s.sym)||realNameOf(d.longName,s.sym)||realNameOf(s.longName,s.sym)||realNameOf(s.label,s.sym)||''; return n;})(),
+      label:(()=>{const n=realNameOf(d.name,s.sym)||realNameOf(d.label,s.sym)||realNameOf(d.longName,s.sym)||realNameOf(s.longName,s.sym)||realNameOf(s.label,s.sym)||''; return n||s.label||'';})(),
+      isLive:true};
     return true;
   }
 
@@ -1218,7 +1221,7 @@ function buildStockGrid() {
       athHtml=`<div class="sc-ath"><div class="sc-ath-val" style="color:var(--muted2)">52W H —</div></div>`;
     }
 
-    const displayName = realNameOf(s.label,s.sym)||realNameOf(s.longName,s.sym)||'';
+    const displayName = realNameOf(s.label,s.sym)||realNameOf(s.longName,s.sym)||realNameOf(s.name,s.sym)||'';
 
     // Extra stats rows (shown below main card row)
     const prevCloseHtml = s.prevClose ? `<span>Prev Close <b>${fmtPrice(s.prevClose)}</b></span>` : '';
@@ -1226,6 +1229,7 @@ function buildStockGrid() {
     const wkRangeHtml   = (s.atl && s.ath) ? `<span>52W Range <b>${fmtPrice(s.atl)} – ${fmtPrice(s.ath)}</b></span>` : '';
     const yieldHtml     = s.dividendYield ? `<span>Yield <b>${(s.dividendYield*100).toFixed(2)}%</b></span>` : '';
     const expHtml       = (s.quoteType==='ETF') ? `<span style="color:var(--purple)">Expense Ratio <b>${s.expenseRatio!=null?(s.expenseRatio*100).toFixed(2)+'%':'N/A'}</b></span>` : '';
+    const remarksHtml   = s.remarks ? `<div class="sc-remarks">${s.remarks}</div>` : '';
     const volHtml       = s.volume ? `<span>${s.type==='crypto'?'Vol 24h':'Volume'} <b>${fmtBig(s.volume)}</b></span>` : '';
     const capHtml       = s.quoteType==='ETF' ? (s.netAssets ? `<span>Net Assets <b>$${fmtBig(s.netAssets)}</b></span>` : '')
                                               : (s.marketCap ? `<span>Mkt Cap <b>$${fmtBig(s.marketCap)}</b></span>` : '');
@@ -1256,6 +1260,7 @@ function buildStockGrid() {
           </div>
         </div>
         ${statsRow?`<div class="sc-stats-row">${statsRow}</div>`:''}
+        ${remarksHtml}
         <div class="sc-move">Group <select onclick="event.stopPropagation()" onchange="moveStock(${i},this.value)">${STOCK_GROUPS.map(([k,l])=>`<option value="${k}"${k===stockRegion(s)?' selected':''}>${l}</option>`).join('')}</select></div>
       </div>`;
     buckets[stockRegion(s)].push(card);
