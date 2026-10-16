@@ -744,11 +744,17 @@ async function loadWatchlist() {
   try {
     setBanner('warn', '⏳ Waking up backend (first load may take ~30s)...');
     const d = await fetchWithTimeout(`${BACKEND}/api/watchlist`, 35000);
-    stocks = d.watchlist.map(s => ({
-      sym:s.sym, type:s.type, cgId:s.cgId, label:s.label||s.name||'', group:s.group||null,
-      price:0, change24:0, drop:0, ath:0, athDrop:0,
-      rsi:40, fear:fearGreed, vol:1.2, isLive:false
-    }));
+    // Deduplicate by sym — keep first occurrence only
+    const seen = new Set();
+    stocks = d.watchlist
+      .filter(s => { if (seen.has(s.sym)) return false; seen.add(s.sym); return true; })
+      .map(s => ({
+        sym:s.sym, type:s.type, cgId:s.cgId, label:s.label||s.name||'', group:s.group||null,
+        price:0, change24:0, drop:0, ath:0, athDrop:0,
+        rsi:40, fear:fearGreed, vol:1.2, isLive:false
+      }));
+    const dupeCount = d.watchlist.length - stocks.length;
+    if (dupeCount > 0) addLog('alert', `⚠ Removed ${dupeCount} duplicate(s) from watchlist`);
     addLog('save', `✔ Watchlist loaded: ${stocks.map(s=>s.sym).join(', ')}`);
   } catch(e) {
     addLog('alert',`⚠ Could not load watchlist (${e.message}) — using defaults`);
