@@ -312,6 +312,7 @@ input[type=range]{flex:2;accent-color:var(--accent)}
     <button class="tab" data-tab="portfolio" onclick="switchTab('portfolio')">Portfolio</button>
     <button class="tab" data-tab="alerts" onclick="switchTab('alerts')">Alerts</button>
     <button class="tab" data-tab="log" onclick="switchTab('log')">Log</button>
+    <button class="tab" data-tab="drawdown" onclick="switchTab('drawdown')">📉 Drawdown</button>
   </div>
 
   <!-- DASHBOARD -->
@@ -480,6 +481,62 @@ input[type=range]{flex:2;accent-color:var(--accent)}
       </div>
       <div id="logList"></div>
     </div>
+  </div>
+
+  <!-- DRAWDOWN MONITOR -->
+  <div class="panel" id="panel-drawdown">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:4px">📉 Global Equity Drawdown Monitor</div>
+      <div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:14px">Distance from all-time highs. Data via Twelve Data. <span id="ddViewed"></span></div>
+
+      <!-- API key setup -->
+      <div id="ddSetup" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;font-size:13px;display:none">
+        <b>Connect Twelve Data API key</b><br>
+        Get a free key at <a href="https://twelvedata.com/pricing" target="_blank" style="color:var(--blue)">twelvedata.com</a> (800 req/day free).
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <input id="ddKeyInput" type="password" placeholder="Paste API key" style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font:inherit;background:var(--surface);color:var(--text)">
+          <button class="btn-sm btn-view" onclick="ddSaveKey()">Save &amp; Load</button>
+        </div>
+        <div id="ddKeyErr" style="color:var(--red);font-size:12px;margin-top:6px;display:none"></div>
+      </div>
+
+      <!-- Table -->
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:var(--fm)">
+          <thead>
+            <tr style="background:var(--surface2)">
+              <th style="text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);font-weight:700;color:var(--text)">Index</th>
+              <th style="padding:10px 8px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:600;text-align:center">Ticker</th>
+              <th style="padding:10px 8px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:600;text-align:right">Current Price</th>
+              <th style="padding:10px 8px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:600;text-align:right">All-Time High</th>
+              <th style="padding:10px 8px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:600;text-align:right">Drawdown %</th>
+            </tr>
+          </thead>
+          <tbody id="ddRows"></tbody>
+        </table>
+      </div>
+
+      <!-- Status bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px">
+        <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">
+          <span id="ddDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block"></span>
+          <span id="ddStatus">Waiting for API key...</span>
+        </span>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sm btn-view" onclick="ddUpdate()">Refresh</button>
+          <button class="btn-sm" style="background:transparent;border:1px solid var(--border);color:var(--muted)" onclick="ddShowSetup()">API Key</button>
+        </div>
+      </div>
+
+      <p style="font-size:11px;color:var(--muted);margin-top:14px;line-height:1.6">
+        Drawdown % = Current Price / All-Time High − 1.
+        <span style="background:rgba(251,217,200,0.5);padding:1px 4px;border-radius:3px">Light red = −10% correction</span> ·
+        <span style="background:var(--red);color:#fff;padding:1px 4px;border-radius:3px">Dark red = −20% bear market</span>.
+        ATH checked once per day. MSCI World tracked via URTH ETF. KOSPI/TAIEX via EWY/EWT. Not investment advice.
+      </p>
+    </div>
+  </div>
+
   </div>
 </div>
 <div class="save-toast" id="toast"></div>
@@ -1091,7 +1148,8 @@ function renderKeyStats(d) {
   if(d.avgVolume) rows.push(['Avg. Volume', fmtBig(d.avgVolume)]);
   rows.push(etf?['Net Assets',money(d.netAssets)]:[crypto?'Market Cap':'Market Cap (intraday)',money(d.marketCap)]);
   if(!crypto) rows.push(['Dividend Yield', d.dividendYield?(d.dividendYield*100).toFixed(2)+'%':'—']);
-  if(etf) rows.push(['Expense Ratio', d.expenseRatio!=null?(d.expenseRatio*100).toFixed(2)+'%':'N/A']);
+  if(etf && d.expenseRatio!=null) rows.push(['Expense Ratio', (d.expenseRatio*100).toFixed(2)+'%']);
+  if(etf && d.netAssets!=null) rows.push(['Net Assets', fmtBig(d.netAssets)]);
   box.innerHTML=rows.map(([k,v])=>`<div class="stat-row"><span>${k}</span><b>${v}</b></div>`).join('');
 }
 
@@ -1234,11 +1292,11 @@ function buildStockGrid() {
     const dayRangeHtml  = (s.dayLow && s.dayHigh) ? `<span>${s.type==='crypto'?'24h Range':'Day Range'} <b>${fmtPrice(s.dayLow)} – ${fmtPrice(s.dayHigh)}</b></span>` : '';
     const wkRangeHtml   = (s.atl && s.ath) ? `<span>52W Range <b>${fmtPrice(s.atl)} – ${fmtPrice(s.ath)}</b></span>` : '';
     const yieldHtml     = s.dividendYield ? `<span>Yield <b>${(s.dividendYield*100).toFixed(2)}%</b></span>` : '';
-    const expHtml       = (s.quoteType==='ETF') ? `<span style="color:var(--purple)">Expense Ratio <b>${s.expenseRatio!=null?(s.expenseRatio*100).toFixed(2)+'%':'N/A'}</b></span>` : '';
+    const expHtml       = (s.quoteType==='ETF' && s.expenseRatio!=null) ? `<span style="color:var(--purple)">Expense Ratio <b>${(s.expenseRatio*100).toFixed(2)}%</b></span>` : '';
     const remarksHtml   = s.remarks ? `<div class="sc-remarks">${s.remarks}</div>` : '';
     const volHtml       = s.volume ? `<span>${s.type==='crypto'?'Vol 24h':'Volume'} <b>${fmtBig(s.volume)}</b></span>` : '';
     const capHtml       = s.quoteType==='ETF' ? (s.netAssets ? `<span>Net Assets <b>$${fmtBig(s.netAssets)}</b></span>` : '')
-                                              : (s.marketCap ? `<span>Mkt Cap <b>$${fmtBig(s.marketCap)}</b></span>` : '');
+                                              : (s.marketCap ? `<span>Mkt Cap <b>${fmtBig(s.marketCap)}</b></span>` : s.netAssets ? `<span>Net Assets <b>${fmtBig(s.netAssets)}</b></span>` : '');
     const statsRow      = [prevCloseHtml, dayRangeHtml, wkRangeHtml, volHtml, capHtml, yieldHtml, expHtml].filter(Boolean).join('');
 
     const card=document.createElement('div');
@@ -1475,9 +1533,22 @@ function switchTab(t) {
 }
 
 // ── INIT ───────────────────────────────────────
+async function warmUpBackend() {
+  // Ping /health first so Render wakes up before we make real API calls
+  // This prevents the main data fetch from timing out on cold start
+  try {
+    setBanner('warn', '⏳ Connecting to backend...');
+    const r = await fetchWithTimeout(`${BACKEND}/health`, 40000);
+    if (r && r.status === 'ok') setBanner('ok', '✔ Backend ready');
+  } catch(e) {
+    setBanner('error', '⚠ Backend slow to wake — retrying data load anyway...');
+  }
+}
+
 async function init() {
-  setBanner('warn','Loading watchlist from backend...');
   buildNotifThresholds();
+  await warmUpBackend();
+  setBanner('warn', 'Loading watchlist...');
   await Promise.all([loadWatchlist(), loadPortfolio(), loadSettings()]);
   buildStockGrid();
   await fetchAllPrices();
@@ -1542,6 +1613,156 @@ async function liveTick() {
 }
 setInterval(liveTick, LIVE_MS);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveTick(); });
+
+// ── DRAWDOWN MONITOR ──────────────────────────────────────────────────────
+(function(){
+  const DD_ROWS = [
+    { name:'S&P 500',              t:'SPY',  px:null, ath:null },
+    { name:'Nasdaq 100',           t:'QQQ',  px:null, ath:null },
+    { name:'MSCI World',           t:'URTH', px:null, ath:null },
+    { name:'KOSPI (South Korea)',  t:'EWY',  px:null, ath:null },
+    { name:'TAIEX (Taiwan)',       t:'EWT',  px:null, ath:null },
+  ];
+  const API='https://api.twelvedata.com';
+  const K_KEY='gedm-td-key', K_DATA='gedm-data-v2';
+  const REFRESH_MS=10*60*1000, ATH_MAX_AGE=24*60*60*1000;
+
+  function lsGet(k){ try{return localStorage.getItem(k);}catch{return null;} }
+  function lsSet(k,v){ try{localStorage.setItem(k,v);}catch{} }
+
+  let apiKey=lsGet(K_KEY)||'', athStamp=0;
+  try{
+    const saved=JSON.parse(lsGet(K_DATA)||'null');
+    if(saved){ athStamp=saved.athStamp||0; DD_ROWS.forEach(r=>{const s=saved.rows&&saved.rows[r.t];if(s){r.px=s.px;r.ath=s.ath;}}); }
+  }catch{}
+
+  // Build table rows
+  const tbody=document.getElementById('ddRows');
+  const cells={};
+  DD_ROWS.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.style.borderBottom='1px solid var(--border)';
+    function td(style,text){
+      const c=document.createElement('td');
+      c.style.cssText='padding:10px 8px;'+style;
+      c.textContent=text||'—';
+      tr.appendChild(c); return c;
+    }
+    td('text-align:left;font-weight:700;color:var(--text)',r.name);
+    td('text-align:center;color:var(--muted);font-size:12px',r.t);
+    cells[r.t]={px:td('text-align:right'),ath:td('text-align:right'),dd:td('text-align:right;font-weight:700')};
+    tbody.appendChild(tr);
+  });
+
+  function fmt(n){ return n==null?'—':n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  function ddRender(){
+    DD_ROWS.forEach(r=>{
+      const c=cells[r.t];
+      if(r.px==null||r.ath==null){ c.px.textContent='—';c.ath.textContent='—';c.dd.textContent='—';c.dd.style.color='var(--muted)';c.dd.closest('tr').style.background='';return; }
+      if(r.px>r.ath) r.ath=r.px;
+      const dd=r.px/r.ath-1;
+      c.px.textContent=fmt(r.px);
+      c.ath.textContent=fmt(r.ath);
+      c.dd.textContent=(dd>-0.00005?'0.00':(dd*100).toFixed(2))+'%';
+      const tr=c.dd.closest('tr');
+      if(dd>-0.00005){ c.dd.style.color='var(--green)'; tr.style.background=''; }
+      else if(dd<=-0.2){ c.dd.style.color='#fff'; tr.style.background='var(--red)'; }
+      else if(dd<=-0.1){ c.dd.style.color='var(--red)'; tr.style.background='rgba(251,217,200,0.4)'; }
+      else{ c.dd.style.color='var(--red)'; tr.style.background=''; }
+    });
+    const now=new Date();
+    const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
+    const p=n=>(n<10?'0':'')+n;
+    const el=document.getElementById('ddViewed');
+    if(el) el.textContent=`Last updated: ${p(now.getDate())}-${mo}-${now.getFullYear()} ${p(now.getHours())}:${p(now.getMinutes())}`;
+  }
+
+  function ddSave(){ const rows={}; DD_ROWS.forEach(r=>{rows[r.t]={px:r.px,ath:r.ath};}); lsSet(K_DATA,JSON.stringify({athStamp,rows})); }
+
+  function ddSetStatus(kind,text){
+    const dot=document.getElementById('ddDot'), st=document.getElementById('ddStatus');
+    if(dot) dot.style.background=kind==='live'?'var(--green)':kind==='error'?'var(--red)':'var(--amber)';
+    if(st) st.textContent=text;
+  }
+
+  window.ddShowSetup=function(msg){
+    const s=document.getElementById('ddSetup'); if(s) s.style.display='block';
+    const e=document.getElementById('ddKeyErr'); if(e){e.textContent=msg||'';e.style.display=msg?'block':'none';}
+  };
+
+  window.ddSaveKey=function(){
+    const v=document.getElementById('ddKeyInput')?.value.trim();
+    if(!v){ddShowSetup('Paste your API key first.');return;}
+    apiKey=v; lsSet(K_KEY,v); athStamp=0;
+    const s=document.getElementById('ddSetup'); if(s) s.style.display='none';
+    ddUpdate();
+  };
+
+  function ddCall(path,params){
+    const q=Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
+    return fetch(`${API}${path}?${q}&apikey=${encodeURIComponent(apiKey)}`,{cache:'no-store'})
+      .then(r=>r.json())
+      .then(j=>{ if(j&&j.status==='error'){const e=new Error(j.message||'API error');e.code=j.code;throw e;} return j; });
+  }
+
+  const syms=DD_ROWS.map(r=>r.t).join(',');
+
+  function ddLoadPrices(){
+    return ddCall('/quote',{symbol:syms}).then(j=>{
+      let ok=0;
+      DD_ROWS.forEach(r=>{const q=j[r.t];const px=q&&parseFloat(q.close);if(px&&isFinite(px)){r.px=px;ok++;}});
+      if(!ok) throw new Error('No prices returned — check your plan supports these tickers.');
+      return ok;
+    });
+  }
+
+  function ddLoadAth(){
+    return ddCall('/time_series',{symbol:syms,interval:'1month',outputsize:5000,order:'ASC'}).then(j=>{
+      let ok=0;
+      DD_ROWS.forEach(r=>{
+        const s=j[r.t]; if(!s||!s.values) return;
+        let hi=0; for(const v of s.values){const h=parseFloat(v.high);if(h>hi)hi=h;}
+        if(hi>0){r.ath=hi;ok++;}
+      });
+      if(ok) athStamp=Date.now();
+    });
+  }
+
+  let ddBusy=false;
+  window.ddUpdate=function(){
+    if(ddBusy) return;
+    if(!apiKey){ddSetStatus('stale','Add your API key to load live data.');ddShowSetup();ddRender();return;}
+    ddBusy=true;
+    ddSetStatus('stale','Updating...');
+    const needAth=Date.now()-athStamp>ATH_MAX_AGE||DD_ROWS.some(r=>r.ath==null);
+    ddLoadPrices()
+      .then(n=>{
+        ddSave(); ddRender();
+        const s=document.getElementById('ddSetup'); if(s) s.style.display='none';
+        ddSetStatus(n===DD_ROWS.length?'live':'stale',
+          (n===DD_ROWS.length?'Live':'Partial ('+n+'/'+DD_ROWS.length+')')+' · '+new Date().toLocaleTimeString());
+        if(needAth) setTimeout(()=>ddLoadAth().then(()=>{ddSave();ddRender();ddSetStatus('live','Live · ATH updated · '+new Date().toLocaleTimeString());}),62000);
+      })
+      .catch(e=>{
+        ddRender();
+        ddSetStatus('error','Error: '+(e?.message||'request failed')+'. Showing saved values.');
+        if(e?.code===401||e?.code===403) ddShowSetup('API key rejected — check and try again.');
+      })
+      .finally(()=>{ddBusy=false;});
+  };
+
+  // Auto-refresh when drawdown tab is opened
+  document.querySelector('[data-tab="drawdown"]')?.addEventListener('click',()=>{
+    ddRender();
+    if(apiKey&&(DD_ROWS.every(r=>r.px==null)||Date.now()-athStamp>REFRESH_MS)) ddUpdate();
+  });
+
+  // Load saved data on startup
+  ddRender();
+  if(apiKey) ddUpdate();
+  setInterval(()=>{ if(apiKey&&document.querySelector('#panel-drawdown.active')) ddUpdate(); }, REFRESH_MS);
+})();
 </script>
 </body>
 </html>
