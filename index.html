@@ -1288,10 +1288,24 @@ function buildStockGrid() {
     const yieldHtml     = s.dividendYield ? `<span>Yield <b>${(s.dividendYield*100).toFixed(2)}%</b></span>` : '';
     const expHtml       = (s.quoteType==='ETF' && s.expenseRatio!=null) ? `<span style="color:var(--purple)">Expense Ratio <b>${(s.expenseRatio*100).toFixed(2)}%</b></span>` : '';
     const remarksHtml   = s.remarks ? `<div class="sc-remarks">${s.remarks}</div>` : '';
-    const volHtml       = s.volume ? `<span>${s.type==='crypto'?'Vol 24h':'Volume'} <b>${fmtBig(s.volume)}</b></span>` : '';
-    const capHtml       = s.quoteType==='ETF' ? (s.netAssets ? `<span>Net Assets <b>$${fmtBig(s.netAssets)}</b></span>` : '')
-                                              : (s.marketCap ? `<span>Mkt Cap <b>${fmtBig(s.marketCap)}</b></span>` : s.netAssets ? `<span>Net Assets <b>${fmtBig(s.netAssets)}</b></span>` : '');
-    const statsRow      = [prevCloseHtml, dayRangeHtml, wkRangeHtml, volHtml, capHtml, yieldHtml, expHtml].filter(Boolean).join('');
+    // Volume — label differs by type
+    const volHtml = s.volume
+      ? `<span>${s.type==='crypto'?'Vol 24h':'Volume'} <b>${fmtBig(s.volume)}</b></span>`
+      : '';
+
+    // Market Cap / Net Assets — ETFs show Net Assets, stocks show Mkt Cap, crypto shows Mkt Cap
+    // Falls back to the other if primary is null
+    let capHtml = '';
+    if (s.quoteType==='ETF') {
+      if (s.netAssets)   capHtml = `<span>Net Assets <b>$${fmtBig(s.netAssets)}</b></span>`;
+      else if (s.marketCap) capHtml = `<span>Mkt Cap <b>$${fmtBig(s.marketCap)}</b></span>`;
+    } else {
+      if (s.marketCap)   capHtml = `<span>Mkt Cap <b>$${fmtBig(s.marketCap)}</b></span>`;
+      else if (s.netAssets) capHtml = `<span>Net Assets <b>$${fmtBig(s.netAssets)}</b></span>`;
+    }
+
+    // Consistent order: Prev Close · Day/24h Range · 52W Range · Volume · Mkt Cap/Net Assets · Yield · Expense Ratio (ETF only)
+    const statsRow = [prevCloseHtml, dayRangeHtml, wkRangeHtml, volHtml, capHtml, yieldHtml, expHtml].filter(Boolean).join('');
 
     const card=document.createElement('div');
     card.className='stock-card'+(i===activeIdx?' active':'');
