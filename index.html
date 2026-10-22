@@ -714,7 +714,10 @@ async function refreshStock(s, i, cgMap) {
       quoteType:(()=>{
         if(d.quoteType && d.quoteType!=='EQUITY') return d.quoteType;
         // Infer ETF from known SGX/London ETF suffixes and known tickers
-        const KNOWN_ETF_TICKERS=new Set(['XUS.SI','XND.SI','EUS.SI','XWR.SI','GSD.SI','O87.SI','ES3.SI','G3B.SI','A7RU.SI','CLR.SI','MBH.SI','ACWD.L','VWRL.L','VWRA.L','IWDA.L','CSPX.L','ISAC.L','SPY','QQQ','GLD','IAU','URTH','EWY','EWT']);
+        const KNOWN_ETF_TICKERS=new Set(['XUS.SI','XND.SI','EUS.SI','XWR.SI','GSD.SI','O87.SI','ES3.SI','G3B.SI','A7RU.SI','CLR.SI','MBH.SI',
+          'ACWD.L','VWRL.L','VWRA.L','IWDA.L','CSPX.L','ISAC.L','IGLN.L','SGLN.L','SGLD.L','VALL.L','VXUA.L','SPYL.L',
+          'SPY','QQQ','VOO','IVV','VTI','VUG','VTV','VEA','VWO','GLD','IAU','SLV','URTH','EWY','EWT',
+          'SCHD','JEPI','JEPQ','DIVO','VIG','DGRO','VYM','HDV']);
         if(KNOWN_ETF_TICKERS.has(s.sym.toUpperCase())) return 'ETF';
         return d.quoteType||'EQUITY';
       })(),
@@ -1687,10 +1690,10 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveTick
       c.ath.textContent='ATH $'+fmtN(r.ath);
       c.dd.textContent=(dd>-0.00005?'AT HIGH':(dd*100).toFixed(2)+'%');
       const tr=c.dd.closest('tr');
-      if(dd>-0.00005){ c.dd.style.color='var(--green)'; tr.style.background=''; }
-      else if(dd<=-0.2){ c.dd.style.color='#fff'; tr.style.background='rgba(224,49,49,0.15)'; }
-      else if(dd<=-0.1){ c.dd.style.color='var(--red)'; tr.style.background='rgba(251,217,200,0.25)'; }
-      else { c.dd.style.color='var(--amber)'; tr.style.background=''; }
+      if(dd>-0.00005){ c.dd.style.color='var(--green)'; c.dd.style.background=''; tr.style.background=''; }
+      else if(dd<=-0.2){ c.dd.style.color='#fff'; c.dd.style.background='var(--red)'; c.dd.style.padding='3px 7px'; c.dd.style.borderRadius='5px'; tr.style.background='rgba(224,49,49,0.08)'; }
+      else if(dd<=-0.1){ c.dd.style.color='var(--red)'; c.dd.style.background='rgba(224,49,49,0.12)'; c.dd.style.padding='3px 7px'; c.dd.style.borderRadius='5px'; tr.style.background='rgba(251,217,200,0.15)'; }
+      else { c.dd.style.color='var(--amber)'; c.dd.style.background=''; tr.style.background=''; }
     });
     const now=new Date();
     const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
