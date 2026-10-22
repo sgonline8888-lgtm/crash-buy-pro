@@ -557,6 +557,21 @@ window.addEventListener('unhandledrejection', function(e){
 <script>
 const BACKEND = 'https://crashbuy-backend.onrender.com';
 const DROP_LEVELS = [-5,-10,-15,-20,-25,-30,-35,-40,-45,-50];
+
+// Shared ETF ticker list — used by both fetchAllPrices and refreshStock
+// Any ticker here is treated as ETF regardless of what Yahoo returns for quoteType
+const KNOWN_ETF_TICKERS = new Set([
+  // SGX ETFs
+  'XUS.SI','XND.SI','EUS.SI','XWR.SI','GSD.SI','O87.SI','ES3.SI','G3B.SI',
+  'A7RU.SI','CLR.SI','MBH.SI','GLS.SI',
+  // London-listed ETFs
+  'ACWD.L','VWRL.L','VWRA.L','IWDA.L','CSPX.L','ISAC.L',
+  'IGLN.L','SGLN.L','SGLD.L','VALL.L','VXUA.L','SPYL.L',
+  // US ETFs
+  'SPY','QQQ','VOO','IVV','VTI','VUG','VTV','VEA','VWO',
+  'GLD','IAU','SLV','URTH','EWY','EWT',
+  'SCHD','JEPI','JEPQ','DIVO','VIG','DGRO','VYM','HDV',
+]);
 let selThreshold = -10;
 let activeIdx = 0;
 let simStep = 0;
@@ -714,11 +729,8 @@ async function refreshStock(s, i, cgMap) {
       quoteType:(()=>{
         if(d.quoteType && d.quoteType!=='EQUITY') return d.quoteType;
         // Infer ETF from known SGX/London ETF suffixes and known tickers
-        const KNOWN_ETF_TICKERS=new Set(['XUS.SI','XND.SI','EUS.SI','XWR.SI','GSD.SI','O87.SI','ES3.SI','G3B.SI','A7RU.SI','CLR.SI','MBH.SI',
-          'ACWD.L','VWRL.L','VWRA.L','IWDA.L','CSPX.L','ISAC.L','IGLN.L','SGLN.L','SGLD.L','VALL.L','VXUA.L','SPYL.L',
-          'SPY','QQQ','VOO','IVV','VTI','VUG','VTV','VEA','VWO','GLD','IAU','SLV','URTH','EWY','EWT',
-          'SCHD','JEPI','JEPQ','DIVO','VIG','DGRO','VYM','HDV']);
         if(KNOWN_ETF_TICKERS.has(s.sym.toUpperCase())) return 'ETF';
+        if(d.quoteType==='ETF') return 'ETF';
         return d.quoteType||'EQUITY';
       })(),
       exchange:d.exchange||null, currency:d.currency||null,
