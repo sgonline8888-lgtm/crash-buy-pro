@@ -727,11 +727,11 @@ async function refreshStock(s, i, cgMap) {
       prevClose:d.previousClose??d.prevClose??null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
       volume:d.volume??null, avgVolume:d.avgVolume??null, marketCap:d.marketCap??null, netAssets:d.netAssets??null,
       quoteType:(()=>{
-        if(d.quoteType && d.quoteType!=='EQUITY') return d.quoteType;
-        // Infer ETF from known SGX/London ETF suffixes and known tickers
+        // KNOWN_ETF_TICKERS always wins — prevents Yahoo misclassifying known ETFs as CRYPTO/MUTUALFUND
         if(KNOWN_ETF_TICKERS.has(s.sym.toUpperCase())) return 'ETF';
-        if(d.quoteType==='ETF') return 'ETF';
-        return d.quoteType||'EQUITY';
+        // Trust Yahoo for everything else
+        if(d.quoteType) return d.quoteType;
+        return 'EQUITY';
       })(),
       exchange:d.exchange||null, currency:d.currency||null,
       regularMarketTime:d.regularMarketTime??null, exchangeTz:d.exchangeTimezoneName||null, tzAbbr:d.timezone||null, marketState:d.marketState||null,
