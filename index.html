@@ -1598,6 +1598,10 @@ function applyQuote(i,q) {
     regularMarketTime:q.regularMarketTime??s.regularMarketTime,marketState:q.marketState??s.marketState,
     tzAbbr:q.timezone||s.tzAbbr,exchangeTz:q.exchangeTimezoneName||s.exchangeTz,
     exchange:s.exchange||q.exchange||null,currency:s.currency||q.currency||null,
+    quoteType:q.quoteType||s.quoteType||'EQUITY',
+    expenseRatio:q.expenseRatio??s.expenseRatio??null,
+    dividendYield:q.dividendYield??s.dividendYield??null,
+    remarks:s.remarks||null,
     longName:realNameOf(s.longName,s.sym)||realNameOf(q.name,s.sym)||'',isLive:true};
 }
 // move the open 1D chart with the live price (in place, so hovering isn't interrupted)
