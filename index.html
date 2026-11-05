@@ -305,18 +305,18 @@ input[type=range]{flex:2;accent-color:var(--accent)}
   </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="tab active" data-tab="drawdown" onclick="switchTab('drawdown')">📉 Drawdown</button>
     <button class="tab" data-tab="stock-sg" onclick="switchTab('stock-sg')">Stock-SG</button>
     <button class="tab" data-tab="stock-usa" onclick="switchTab('stock-usa')">Stock-USA</button>
     <button class="tab" data-tab="stock-others" onclick="switchTab('stock-others')">Stock-Others</button>
     <button class="tab" data-tab="portfolio" onclick="switchTab('portfolio')">Portfolio</button>
     <button class="tab" data-tab="alerts" onclick="switchTab('alerts')">Alerts</button>
     <button class="tab" data-tab="log" onclick="switchTab('log')">Log</button>
-    <button class="tab" data-tab="drawdown" onclick="switchTab('drawdown')">📉 Drawdown</button>
+    <button class="tab" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
   </div>
 
   <!-- DASHBOARD -->
-  <div class="panel active" id="panel-dashboard">
+  <div class="panel" id="panel-dashboard">
     <div class="card chart-card" id="chartCard">
       <div class="yf-head">
         <div class="yf-exch" id="yfExch"></div>
@@ -484,10 +484,10 @@ input[type=range]{flex:2;accent-color:var(--accent)}
   </div>
 
   <!-- DRAWDOWN MONITOR -->
-  <div class="panel" id="panel-drawdown">
+  <div class="panel active" id="panel-drawdown">
     <div class="card">
       <div class="card-title" style="margin-bottom:4px">📉 Global Equity Drawdown Monitor</div>
-      <div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:14px">Distance from all-time highs. Data via Twelve Data. <span id="ddViewed"></span></div>
+      <div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:14px">Distance from 52-week highs. Data via CrashBuy backend (Yahoo Finance). <span id="ddViewed"></span></div>
 
       <!-- Table -->
       <div style="overflow-x:auto">
@@ -1553,6 +1553,7 @@ function switchTab(t) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+panel).classList.add('active');
   if(t==='alerts') loadAlertStatus();
+  if(t==='dashboard' && typeof chartInst!=='undefined' && chartInst) setTimeout(()=>chartInst.resize(),50);
 }
 
 // ── INIT ───────────────────────────────────────
@@ -1571,6 +1572,7 @@ async function warmUpBackend() {
 async function init() {
   buildNotifThresholds();
   await warmUpBackend();
+  if (window.ddUpdate) window.ddUpdate();   // Drawdown is the landing tab, so load it as soon as the backend is awake
   setBanner('warn', 'Loading watchlist...');
   await Promise.all([loadWatchlist(), loadPortfolio(), loadSettings()]);
   buildStockGrid();
@@ -1652,6 +1654,9 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveTick
     { name:'Nasdaq 100 (XND.SI)', t:'XND.SI',px:null,ath:null,chg:null },
     { name:'Gold (GSD.SI)',       t:'GSD.SI',px:null,ath:null,chg:null },
     { name:'Bitcoin',             t:'BTC/USD',px:null,ath:null,chg:null },
+    { name:'OCBC Bank',           t:'O39.SI', px:null,ath:null,chg:null },
+    { name:'DBS Group',           t:'D05.SI', px:null,ath:null,chg:null },
+    { name:'UOB',                 t:'U11.SI', px:null,ath:null,chg:null },
   ];
   const K_DATA='dd-data-v3';
   const REFRESH_MS=60*1000; // 1 min real-time refresh
@@ -1771,9 +1776,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveTick
     ddRender(); ddUpdate();
   });
 
-  ddRender();
-  // Start fetching immediately if tab is active, or on first open
-  ddUpdate();
+  ddRender();   // show last saved values instantly; live fetch is triggered from init() once the backend is awake
   setInterval(()=>{ if(document.querySelector('#panel-drawdown.active')) ddUpdate(); }, REFRESH_MS);
 })();
 </script>
