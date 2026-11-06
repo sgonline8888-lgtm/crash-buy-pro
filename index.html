@@ -725,7 +725,7 @@ async function refreshStock(s, i, cgMap) {
     const rsi = c<-5?25:c<-2?33:c<0?40:52;
     stocks[i] = {...s, price:d.price, change24:c, drop, ath, atl, athDrop, vol,
       prevClose:d.previousClose??d.prevClose??null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
-      volume:d.volume??null, avgVolume:d.avgVolume??null, marketCap:d.marketCap??null, netAssets:d.netAssets??null,
+      volume:d.volume??null, avgVolume:d.avgVolume??null, marketCap:d.marketCap??null, netAssets:d.netAssets??null, sizeEst:!!d.sizeEst,
       quoteType:(()=>{
         // KNOWN_ETF_TICKERS always wins — prevents Yahoo misclassifying known ETFs as CRYPTO/MUTUALFUND
         if(KNOWN_ETF_TICKERS.has(s.sym.toUpperCase())) return 'ETF';
@@ -1308,15 +1308,21 @@ function buildStockGrid() {
       ? `<span>${s.type==='crypto'?'Vol 24h':'Volume'} <b>${fmtBig(s.volume)}</b></span>`
       : '';
 
-    // Market Cap / Net Assets — ETFs show Net Assets, stocks show Mkt Cap, crypto shows Mkt Cap
-    // Falls back to the other if primary is null
+    // Size figure on EVERY card: ETFs -> Net Assets (AUM), stocks & crypto -> Mkt Cap.
+    // Falls back to the other figure, then to an estimate (~), then to "n/a" so a gap is visible rather than silent.
+    // Futures, FX and indices (GC=F, EURUSD=X, ^GSPC) have no size, so they show nothing.
     let capHtml = '';
-    if (s.quoteType==='ETF') {
-      if (s.netAssets)   capHtml = `<span>Net Assets <b>$${fmtBig(s.netAssets)}</b></span>`;
-      else if (s.marketCap) capHtml = `<span>Mkt Cap <b>$${fmtBig(s.marketCap)}</b></span>`;
-    } else {
-      if (s.marketCap)   capHtml = `<span>Mkt Cap <b>$${fmtBig(s.marketCap)}</b></span>`;
-      else if (s.netAssets) capHtml = `<span>Net Assets <b>$${fmtBig(s.netAssets)}</b></span>`;
+    const noSize = s.quoteType==='FUTURE' || s.quoteType==='CURRENCY' || s.quoteType==='INDEX' || /[=^]/.test(s.sym);
+    if (!noSize) {
+      const isEtf = s.quoteType==='ETF';
+      const order = isEtf ? [['Net Assets',s.netAssets],['Mkt Cap',s.marketCap]] : [['Mkt Cap',s.marketCap],['Net Assets',s.netAssets]];
+      const hit = order.find(([,v]) => v);
+      if (hit) {
+        const tip = s.sizeEst ? ' title="Estimate: shares outstanding x price (Yahoo has no reported figure)"' : '';
+        capHtml = `<span${tip}>${hit[0]} <b>${s.sizeEst?'~':''}$${fmtBig(hit[1])}</b></span>`;
+      } else {
+        capHtml = `<span>${isEtf?'Net Assets':'Mkt Cap'} <b style="color:var(--muted)">n/a</b></span>`;
+      }
     }
 
     // Consistent order: Prev Close · Day/24h Range · 52W Range · Volume · Mkt Cap/Net Assets · Yield · Expense Ratio (ETF only)
@@ -1597,6 +1603,7 @@ function applyQuote(i,q) {
     prevClose:prev??s.prevClose,dayHigh:q.dayHigh??s.dayHigh,dayLow:q.dayLow??s.dayLow,volume:q.volume??s.volume,
     avgVolume:q.avgVolume??s.avgVolume,
     marketCap:s.type==='crypto'?s.marketCap:(q.marketCap??s.marketCap),netAssets:q.netAssets??s.netAssets,
+    sizeEst:(q.netAssets!=null||(s.type!=='crypto'&&q.marketCap!=null))?false:!!s.sizeEst,
     regularMarketTime:q.regularMarketTime??s.regularMarketTime,marketState:q.marketState??s.marketState,
     tzAbbr:q.timezone||s.tzAbbr,exchangeTz:q.exchangeTimezoneName||s.exchangeTz,
     exchange:s.exchange||q.exchange||null,currency:s.currency||q.currency||null,
