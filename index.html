@@ -571,7 +571,21 @@ const KNOWN_ETF_TICKERS = new Set([
   'SPY','QQQ','VOO','IVV','VTI','VUG','VTV','VEA','VWO',
   'GLD','IAU','SLV','URTH','EWY','EWT',
   'SCHD','JEPI','JEPQ','DIVO','VIG','DGRO','VYM','HDV',
+  'GLDM','IAUM','SGOL','QQQM','VUG','EXUS.L','EIMI.L','CNDX.L','EQQQ.L','XNAQ.L','QQQE.L','QQQA.L',
 ]);
+
+// One rule for the instrument type, used by BOTH the 60s refresh and the 10s live ticks, so they can never fight each other:
+//  - known ETF tickers are always ETF; ETC/ETN/ETP (e.g. gold ETCs) count as ETF
+//  - a weaker tick (blank / EQUITY) never downgrades something already known to be an ETF
+function normQuoteType(sym, fresh, prev) {
+  if (KNOWN_ETF_TICKERS.has(String(sym).toUpperCase())) return 'ETF';
+  const n = q => (q && /^ET[CFNP]$/i.test(q)) ? 'ETF' : q;
+  const f = n(fresh), p = n(prev);
+  if (p === 'ETF' && (!f || f === 'EQUITY')) return 'ETF';
+  return f || p || 'EQUITY';
+}
+// A lowercase ticker (e.g. "vug") used to be saved as a CoinGecko crypto id. Known ETFs are never crypto.
+function isKnownEtfSym(sym) { return KNOWN_ETF_TICKERS.has(String(sym).toUpperCase()); }
 let selThreshold = -10;
 let activeIdx = 0;
 let simStep = 0;
@@ -726,13 +740,7 @@ async function refreshStock(s, i, cgMap) {
     stocks[i] = {...s, price:d.price, change24:c, drop, ath, atl, athDrop, vol,
       prevClose:d.previousClose??d.prevClose??null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
       volume:d.volume??null, avgVolume:d.avgVolume??null, marketCap:d.marketCap??null, netAssets:d.netAssets??null, sizeEst:!!d.sizeEst,
-      quoteType:(()=>{
-        // KNOWN_ETF_TICKERS always wins — prevents Yahoo misclassifying known ETFs as CRYPTO/MUTUALFUND
-        if(KNOWN_ETF_TICKERS.has(s.sym.toUpperCase())) return 'ETF';
-        // Trust Yahoo for everything else
-        if(d.quoteType) return d.quoteType;
-        return 'EQUITY';
-      })(),
+      quoteType:normQuoteType(s.sym, d.quoteType, s.quoteType),
       exchange:d.exchange||null, currency:d.currency||null,
       regularMarketTime:d.regularMarketTime??null, exchangeTz:d.exchangeTimezoneName||null, tzAbbr:d.timezone||null, marketState:d.marketState||null,
       dividendYield:d.dividendYield??null, expenseRatio:d.expenseRatio??null, remarks:d.remarks||s.remarks||null,
@@ -815,7 +823,7 @@ async function loadWatchlist() {
     stocks = d.watchlist
       .filter(s => { if (seen.has(s.sym)) return false; seen.add(s.sym); return true; })
       .map(s => ({
-        sym:s.sym, type:s.type, cgId:s.cgId, label:s.label||s.name||'', group:s.group||null,
+        sym:s.sym, type:(s.type==='crypto'&&isKnownEtfSym(s.sym))?'stock':s.type, cgId:(s.type==='crypto'&&isKnownEtfSym(s.sym))?null:s.cgId, label:s.label||s.name||'', group:s.group||null,
         price:0, change24:0, drop:0, ath:0, athDrop:0,
         rsi:40, fear:fearGreed, vol:1.2, isLive:false
       }));
@@ -1271,6 +1279,8 @@ function buildStockGrid() {
     return;
   }
   const buckets={sg:[],usa:[],others:[]};
+  const sizeTargets=stocks.filter(x=>x.isLive&&x.type!=='crypto'&&x.quoteType!=='FUTURE'&&!/[=^]/.test(x.sym));
+  const sizeFeedDown=sizeTargets.length>=3&&sizeTargets.every(x=>!x.marketCap&&!x.netAssets);
   stocks.forEach((s,i)=>{
     const score=calcScore(s);
     const c=s.change24||0;
@@ -1313,7 +1323,7 @@ function buildStockGrid() {
     // Futures, FX and indices (GC=F, EURUSD=X, ^GSPC) have no size, so they show nothing.
     let capHtml = '';
     const noSize = s.quoteType==='FUTURE' || s.quoteType==='CURRENCY' || s.quoteType==='INDEX' || /[=^]/.test(s.sym);
-    if (!noSize) {
+    if (!noSize && !sizeFeedDown) {
       const isEtf = s.quoteType==='ETF';
       const order = isEtf ? [['Net Assets',s.netAssets],['Mkt Cap',s.marketCap]] : [['Mkt Cap',s.marketCap],['Net Assets',s.netAssets]];
       const hit = order.find(([,v]) => v);
@@ -1366,6 +1376,7 @@ function buildStockGrid() {
     g.innerHTML=`<div style="font-family:var(--fm);font-size:12px;color:var(--muted2);padding:16px 0;text-align:center">No stocks in ${label} yet.<br>${hint}</div>`;
     return;
   }
+  if(sizeFeedDown){ const n=document.createElement('div'); n.style.cssText='font-family:var(--fm);font-size:11px;color:var(--amber);background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.25);border-radius:8px;padding:8px 12px;margin-bottom:10px'; n.textContent='⚠ Market cap / fund size from Yahoo is temporarily unavailable — the backend is retrying. Prices, ranges and volume are not affected.'; g.appendChild(n); }
   cards.forEach(c=>g.appendChild(c));
 }
 
@@ -1380,7 +1391,7 @@ async function addStock() {
   const input=document.getElementById('inSym').value.trim();
   const labelIn=document.getElementById('inLabel').value.trim();
   if(!input){setBanner('warn','⚠ Enter a ticker or CoinGecko ID.');setTimeout(hideBanner,3000);return;}
-  const isCrypto=/^[a-z][a-z0-9\-]+$/.test(input);
+  const isCrypto=/^[a-z][a-z0-9\-]+$/.test(input) && !isKnownEtfSym(input);
   const sym=isCrypto?(labelIn.toUpperCase()||input.toUpperCase()):input.toUpperCase();
   const cgId=isCrypto?input:null;
   const type=isCrypto?'crypto':'stock';
@@ -1607,7 +1618,7 @@ function applyQuote(i,q) {
     regularMarketTime:q.regularMarketTime??s.regularMarketTime,marketState:q.marketState??s.marketState,
     tzAbbr:q.timezone||s.tzAbbr,exchangeTz:q.exchangeTimezoneName||s.exchangeTz,
     exchange:s.exchange||q.exchange||null,currency:s.currency||q.currency||null,
-    quoteType:q.quoteType||s.quoteType||'EQUITY',
+    quoteType:normQuoteType(s.sym, q.quoteType, s.quoteType),
     expenseRatio:q.expenseRatio??s.expenseRatio??null,
     dividendYield:q.dividendYield??s.dividendYield??null,
     remarks:s.remarks||null,
