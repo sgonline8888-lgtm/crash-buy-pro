@@ -639,11 +639,15 @@ async function doLogin(e) {
 }
 
 // ── UTILS ──────────────────────────────────────
-function fmtPrice(p) {
+// Currency symbol for a Yahoo currency code. Unknown/missing -> '$' (USD, crypto, older cached data).
+const CCY_SYM={USD:'$',SGD:'S$',GBP:'£',EUR:'€',ZAR:'R',HKD:'HK$',JPY:'¥',AUD:'A$',CAD:'C$',CNY:'CN¥',CHF:'CHF '};
+function curSym(c){ return c ? (CCY_SYM[c] ?? (c+' ')) : '$'; }
+function fmtPrice(p, cur) {
   if (!p || p === 0) return '—';
-  if (p >= 1000) return '$' + p.toLocaleString(undefined,{maximumFractionDigits:2});
-  if (p >= 1) return '$' + p.toFixed(2);
-  return '$' + p.toFixed(4);
+  const sym=curSym(cur);
+  if (p >= 1000) return sym + p.toLocaleString(undefined,{maximumFractionDigits:2});
+  if (p >= 1) return sym + p.toFixed(2);
+  return sym + p.toFixed(4);
 }
 // a label that is just the ticker (e.g. "G3B.SI") is not a company name
 function realNameOf(v,sym) { return (v && String(v).trim().toUpperCase()!==String(sym).toUpperCase()) ? String(v).trim() : ''; }
@@ -1111,7 +1115,7 @@ function updateDisplay(d) {
 
   // ATH info
   if (d.ath && d.ath > 0) {
-    document.getElementById('athValue').textContent = fmtPrice(d.ath);
+    document.getElementById('athValue').textContent = fmtPrice(d.ath,d.currency);
     const athDrop = d.athDrop || 0;
     const athDropEl = document.getElementById('athDropPct');
     athDropEl.textContent = athDrop > 0.1 ? `-${athDrop}%` : 'AT HIGH ✓';
@@ -1155,11 +1159,11 @@ function updateDisplay(d) {
 function renderKeyStats(d) {
   const box=document.getElementById('keyStats'); if(!box) return;
   const crypto=d.type==='crypto', etf=d.quoteType==='ETF';
-  const money=v=>v?'$'+fmtBig(v):'—';
+  const money=v=>v?(etf?'$':curSym(d.currency))+fmtBig(v):'—';
   const rows=[
-    ['Previous Close', d.prevClose?fmtPrice(d.prevClose):'—'],
-    [crypto?'24h Range':"Day's Range", (d.dayLow&&d.dayHigh)?`${fmtPrice(d.dayLow)} – ${fmtPrice(d.dayHigh)}`:'—'],
-    ['52 Week Range', (d.atl&&d.ath)?`${fmtPrice(d.atl)} – ${fmtPrice(d.ath)}`:'—'],
+    ['Previous Close', d.prevClose?fmtPrice(d.prevClose,d.currency):'—'],
+    [crypto?'24h Range':"Day's Range", (d.dayLow&&d.dayHigh)?`${fmtPrice(d.dayLow,d.currency)} – ${fmtPrice(d.dayHigh,d.currency)}`:'—'],
+    ['52 Week Range', (d.atl&&d.ath)?`${fmtPrice(d.atl,d.currency)} – ${fmtPrice(d.ath,d.currency)}`:'—'],
     [crypto?'Volume (24h)':'Volume', d.volume?fmtBig(d.volume):'—'],
   ];
   if(d.avgVolume) rows.push(['Avg. Volume', fmtBig(d.avgVolume)]);
@@ -1237,16 +1241,16 @@ function updateTranches(price,drop) {
   const ref=document.getElementById('trancheRef');
   const alertLvl=Math.abs(selThreshold);
   if(ref) ref.innerHTML=(hasHigh
-    ? `Levels from 52W high <b>${fmtPrice(high)}</b> · now <b>-${offHigh.toFixed(1)}%</b>`
-    : `52W high unavailable — levels are from current price <b>${fmtPrice(price)}</b>`)
-    + `<br>Alert trigger: <b>-${alertLvl}%</b> → <b>${fmtPrice(high*(1-alertLvl/100))}</b>`;
+    ? `Levels from 52W high <b>${fmtPrice(high,s.currency)}</b> · now <b>-${offHigh.toFixed(1)}%</b>`
+    : `52W high unavailable — levels are from current price <b>${fmtPrice(price,s.currency)}</b>`)
+    + `<br>Alert trigger: <b>-${alertLvl}%</b> → <b>${fmtPrice(high*(1-alertLvl/100),s.currency)}</b>`;
   const weights=[15,20,25,25,15];
   TRANCHE_LEVELS.forEach((lvl,i)=>{
     const bp=high*(1-lvl/100);
     const alloc=Math.round(cap*weights[i]/100);
     const isReady=offHigh>=lvl, isFired=offHigh>=lvl+3;
     const el=document.createElement('div'); el.className='tranche'+(lvl===alertLvl?' tranche-alert':'');
-    el.innerHTML=`<div class="tr-num">#${i+1}</div><div class="tr-trigger">-${lvl}% → ${fmtPrice(bp)}</div><div class="tr-alloc">$${alloc.toLocaleString()}</div><div class="tr-status ${isFired?'ts-done':isReady?'ts-ready':'ts-wait'}">${isFired?'FIRED':isReady?'READY':'WAITING'}</div>`;
+    el.innerHTML=`<div class="tr-num">#${i+1}</div><div class="tr-trigger">-${lvl}% → ${fmtPrice(bp,s.currency)}</div><div class="tr-alloc">$${alloc.toLocaleString()}</div><div class="tr-status ${isFired?'ts-done':isReady?'ts-ready':'ts-wait'}">${isFired?'FIRED':isReady?'READY':'WAITING'}</div>`;
     list.appendChild(el);
   });
 }
@@ -1298,7 +1302,7 @@ function buildStockGrid() {
       const ac=athDropClass(ad);
       const acColor=ac==='bad'?'var(--red)':ac==='warn'?'var(--amber)':'var(--green)';
       athHtml=`<div class="sc-ath">
-        <div class="sc-ath-val">52W H ${fmtPrice(s.ath)}</div>
+        <div class="sc-ath-val">52W H ${fmtPrice(s.ath,s.currency)}</div>
         <div class="sc-ath-off" style="color:${acColor}">${ad>0.1?`-${ad}% off high`:'AT HIGH ✓'}</div>
       </div>`;
     } else {
@@ -1308,9 +1312,9 @@ function buildStockGrid() {
     const displayName = realNameOf(s.label,s.sym)||realNameOf(s.longName,s.sym)||realNameOf(s.name,s.sym)||'';
 
     // Extra stats rows (shown below main card row)
-    const prevCloseHtml = s.prevClose ? `<span>Prev Close <b>${fmtPrice(s.prevClose)}</b></span>` : '';
-    const dayRangeHtml  = (s.dayLow && s.dayHigh) ? `<span>${s.type==='crypto'?'24h Range':'Day Range'} <b>${fmtPrice(s.dayLow)} – ${fmtPrice(s.dayHigh)}</b></span>` : '';
-    const wkRangeHtml   = (s.atl && s.ath) ? `<span>52W Range <b>${fmtPrice(s.atl)} – ${fmtPrice(s.ath)}</b></span>` : '';
+    const prevCloseHtml = s.prevClose ? `<span>Prev Close <b>${fmtPrice(s.prevClose,s.currency)}</b></span>` : '';
+    const dayRangeHtml  = (s.dayLow && s.dayHigh) ? `<span>${s.type==='crypto'?'24h Range':'Day Range'} <b>${fmtPrice(s.dayLow,s.currency)} – ${fmtPrice(s.dayHigh,s.currency)}</b></span>` : '';
+    const wkRangeHtml   = (s.atl && s.ath) ? `<span>52W Range <b>${fmtPrice(s.atl,s.currency)} – ${fmtPrice(s.ath,s.currency)}</b></span>` : '';
     const yieldHtml     = s.dividendYield ? `<span>Yield <b>${(s.dividendYield*100).toFixed(2)}%</b></span>` : '';
     const expHtml       = (s.quoteType==='ETF' && s.expenseRatio!=null) ? `<span style="color:var(--purple)">Expense Ratio <b>${(s.expenseRatio*100).toFixed(2)}%</b></span>` : '';
     const remarksHtml   = s.remarks ? `<div class="sc-remarks">${s.remarks}</div>` : '';
@@ -1330,7 +1334,7 @@ function buildStockGrid() {
       const hit = order.find(([,v]) => v);
       if (hit) {
         const tip = s.sizeEst ? ` title="${String(s.sizeNote||'Estimate: shares outstanding x price (Yahoo has no reported figure)').replace(/"/g,'&quot;')}"` : '';
-        capHtml = `<span${tip}>${hit[0]} <b>${s.sizeEst?'~':''}$${fmtBig(hit[1])}</b></span>`;
+        capHtml = `<span${tip}>${hit[0]} <b>${s.sizeEst?'~':''}${isEtf?'$':curSym(s.currency)}${fmtBig(hit[1])}</b></span>`;
       } else if (!sizeFeedDown) {   // while Yahoo is down the notice at the top explains the blanks, so no n/a on every card
         capHtml = `<span>${isEtf?'Net Assets':'Mkt Cap'} <b style="color:var(--muted)">n/a</b></span>`;
       }
@@ -1350,7 +1354,7 @@ function buildStockGrid() {
             ${displayName?`<div class="sc-name">${displayName}</div>`:''}
           </div>
           <div class="sc-pricebox">
-            <div class="sc-price">${fmtPrice(s.price)}</div>
+            <div class="sc-price">${fmtPrice(s.price,s.currency)}</div>
             ${changeBadge}
           </div>
           ${athHtml}
@@ -1465,11 +1469,11 @@ function updatePortfolio() {
   let total=0;
   portfolio.forEach(p=>{
     const s=stocks.find(x=>x.sym===p.symbol||x.sym===p.symbol+'/USD');
-    const cur=s&&s.price>0?s.price:p.buyPrice;
+    const cur=s&&s.price>0?s.price:p.buyPrice; const cc=s?s.currency:null;
     const pnl=(cur-p.buyPrice)*p.qty; const pct=((cur-p.buyPrice)/p.buyPrice*100).toFixed(2);
     total+=pnl;
     const row=document.createElement('div'); row.className='pf-row';
-    row.innerHTML=`<div class="pf-sym">${p.symbol}</div><div class="pf-qty">${p.qty}x</div><div class="pf-buy">@${fmtPrice(p.buyPrice)}</div><div class="pf-cur" style="color:${cur>=p.buyPrice?'var(--green)':'var(--red)'}">${fmtPrice(cur)}</div><div class="pf-pnl" style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}$${pnl.toFixed(2)} (${pct}%)</div><button class="btn-sm btn-del" onclick="removePosition(${p.id})">✕</button>`;
+    row.innerHTML=`<div class="pf-sym">${p.symbol}</div><div class="pf-qty">${p.qty}x</div><div class="pf-buy">@${fmtPrice(p.buyPrice,cc)}</div><div class="pf-cur" style="color:${cur>=p.buyPrice?'var(--green)':'var(--red)'}">${fmtPrice(cur,cc)}</div><div class="pf-pnl" style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}$${pnl.toFixed(2)} (${pct}%)</div><button class="btn-sm btn-del" onclick="removePosition(${p.id})">✕</button>`;
     g.appendChild(row);
   });
   const t=document.getElementById('pfTotal'); t.style.display='flex';
@@ -1497,7 +1501,7 @@ function simulateDrop() {
   const np=+(ath*(1-nd/100)).toFixed(4);
   stocks[activeIdx]={...d,price:np,change24:-nd,drop:nd,athDrop:d.ath>0?nd:d.athDrop,rsi:Math.max(12,d.rsi-4),fear:Math.min(95,d.fear+5),vol:Math.min(8,+(d.vol+0.6).toFixed(1)),isLive:false};
   updateDisplay(stocks[activeIdx]); initChart(activeIdx); buildStockGrid(); updatePortfolio();
-  addLog('alert',`⚠ Simulated -${nd}% → ${fmtPrice(np)}`);
+  addLog('alert',`⚠ Simulated -${nd}% → ${fmtPrice(np,d.currency)}`);
 }
 
 // ── EMAIL / SMS ────────────────────────────────
