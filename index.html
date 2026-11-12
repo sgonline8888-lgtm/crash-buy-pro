@@ -563,7 +563,7 @@ const DROP_LEVELS = [-5,-10,-15,-20,-25,-30,-35,-40,-45,-50];
 const KNOWN_ETF_TICKERS = new Set([
   // SGX ETFs
   'XUS.SI','XND.SI','EUS.SI','XWR.SI','GSD.SI','O87.SI','ES3.SI','G3B.SI',
-  'A7RU.SI','CLR.SI','MBH.SI','GLS.SI',
+  'CLR.SI','MBH.SI','GLS.SI',
   // London-listed ETFs
   'ACWD.L','VWRL.L','VWRA.L','IWDA.L','CSPX.L','ISAC.L',
   'IGLN.L','SGLN.L','SGLD.L','VALL.L','VXUA.L','SPYL.L',
@@ -739,7 +739,7 @@ async function refreshStock(s, i, cgMap) {
     const rsi = c<-5?25:c<-2?33:c<0?40:52;
     stocks[i] = {...s, price:d.price, change24:c, drop, ath, atl, athDrop, vol,
       prevClose:d.previousClose??d.prevClose??null, dayHigh:d.dayHigh||null, dayLow:d.dayLow||null,
-      volume:d.volume??null, avgVolume:d.avgVolume??null, marketCap:d.marketCap??null, netAssets:d.netAssets??null, sizeEst:!!d.sizeEst,
+      volume:d.volume??null, avgVolume:d.avgVolume??null, marketCap:d.marketCap??null, netAssets:d.netAssets??null, sizeEst:!!d.sizeEst, sizeNote:d.sizeNote||null,
       quoteType:normQuoteType(s.sym, d.quoteType, s.quoteType),
       exchange:d.exchange||null, currency:d.currency||null,
       regularMarketTime:d.regularMarketTime??null, exchangeTz:d.exchangeTimezoneName||null, tzAbbr:d.timezone||null, marketState:d.marketState||null,
@@ -1280,7 +1280,8 @@ function buildStockGrid() {
   }
   const buckets={sg:[],usa:[],others:[]};
   const sizeTargets=stocks.filter(x=>x.isLive&&x.type!=='crypto'&&x.quoteType!=='FUTURE'&&!/[=^]/.test(x.sym));
-  const sizeFeedDown=sizeTargets.length>=3&&sizeTargets.every(x=>!x.marketCap&&!x.netAssets);
+  const sizeLacking=sizeTargets.filter(x=>!x.marketCap&&!x.netAssets).length;
+  const sizeFeedDown=sizeTargets.length>=3&&sizeLacking/sizeTargets.length>=0.5;
   stocks.forEach((s,i)=>{
     const score=calcScore(s);
     const c=s.change24||0;
@@ -1323,14 +1324,14 @@ function buildStockGrid() {
     // Futures, FX and indices (GC=F, EURUSD=X, ^GSPC) have no size, so they show nothing.
     let capHtml = '';
     const noSize = s.quoteType==='FUTURE' || s.quoteType==='CURRENCY' || s.quoteType==='INDEX' || /[=^]/.test(s.sym);
-    if (!noSize && !sizeFeedDown) {
+    if (!noSize) {
       const isEtf = s.quoteType==='ETF';
       const order = isEtf ? [['Net Assets',s.netAssets],['Mkt Cap',s.marketCap]] : [['Mkt Cap',s.marketCap],['Net Assets',s.netAssets]];
       const hit = order.find(([,v]) => v);
       if (hit) {
-        const tip = s.sizeEst ? ' title="Estimate: shares outstanding x price (Yahoo has no reported figure)"' : '';
+        const tip = s.sizeEst ? ` title="${String(s.sizeNote||'Estimate: shares outstanding x price (Yahoo has no reported figure)').replace(/"/g,'&quot;')}"` : '';
         capHtml = `<span${tip}>${hit[0]} <b>${s.sizeEst?'~':''}$${fmtBig(hit[1])}</b></span>`;
-      } else {
+      } else if (!sizeFeedDown) {   // while Yahoo is down the notice at the top explains the blanks, so no n/a on every card
         capHtml = `<span>${isEtf?'Net Assets':'Mkt Cap'} <b style="color:var(--muted)">n/a</b></span>`;
       }
     }
@@ -1376,7 +1377,7 @@ function buildStockGrid() {
     g.innerHTML=`<div style="font-family:var(--fm);font-size:12px;color:var(--muted2);padding:16px 0;text-align:center">No stocks in ${label} yet.<br>${hint}</div>`;
     return;
   }
-  if(sizeFeedDown){ const n=document.createElement('div'); n.style.cssText='font-family:var(--fm);font-size:11px;color:var(--amber);background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.25);border-radius:8px;padding:8px 12px;margin-bottom:10px'; n.textContent='⚠ Market cap / fund size from Yahoo is temporarily unavailable — the backend is retrying. Prices, ranges and volume are not affected.'; g.appendChild(n); }
+  if(sizeFeedDown){ const n=document.createElement('div'); n.style.cssText='font-family:var(--fm);font-size:11px;color:var(--amber);background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.25);border-radius:8px;padding:8px 12px;margin-bottom:10px'; n.textContent='⚠ Yahoo is not providing market cap / fund size right now. Figures marked ~ are estimates from filings or issuer data (hover for source); others are left blank. Prices, ranges and volume are not affected.'; g.appendChild(n); }
   cards.forEach(c=>g.appendChild(c));
 }
 
