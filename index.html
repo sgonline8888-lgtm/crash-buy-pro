@@ -645,7 +645,7 @@ function curSym(c){ return c ? (CCY_SYM[c] ?? (c+' ')) : '$'; }
 function fmtPrice(p, cur) {
   if (!p || p === 0) return '—';
   const sym=curSym(cur);
-  if (p >= 1000) return sym + p.toLocaleString(undefined,{maximumFractionDigits:2});
+  if (p >= 1000) return sym + p.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
   if (p >= 1) return sym + p.toFixed(2);
   return sym + p.toFixed(4);
 }
@@ -760,7 +760,9 @@ async function refreshStock(s, i, cgMap) {
   const ySym = cg && cg.symbol ? cg.symbol.toUpperCase()+'-USD' : chartSymbol(s);
   let y = null;
   try { y = await fetchStock(ySym); } catch {}
-  let price = cg && cg.current_price!=null ? cg.current_price : (y && y.price) || null;
+  // Price comes from Yahoo on BOTH paths (the 10s live ticks already use Yahoo's BTC-USD), so it can no longer flip
+  // between CoinGecko and Yahoo every minute. CoinGecko is only the fallback.
+  let price = (y && y.price!=null) ? y.price : (cg && cg.current_price!=null ? cg.current_price : null);
   let c = cg && cg.price_change_percentage_24h!=null ? cg.price_change_percentage_24h : (y ? y.changePct : null);
   if (price == null) {                                   // last resort: the old direct CoinGecko call
     const d = await fetchCrypto(s.cgId);
@@ -1681,7 +1683,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveTick
     { name:'DBS Group',           t:'D05.SI', px:null,ath:null,chg:null },
     { name:'UOB',                 t:'U11.SI', px:null,ath:null,chg:null },
   ];
-  const K_DATA='dd-data-v3';
+  const K_DATA='dd-data-v4';   // new key: discards the old ratcheted highs saved in your browser
   const REFRESH_MS=60*1000; // 1 min real-time refresh
 
   function lsGet(k){ try{return localStorage.getItem(k);}catch{return null;} }
@@ -1731,7 +1733,7 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveTick
         c.chg.textContent=(r.chg>=0?'▲ +':'▼ ')+fmtN(r.chg)+'%';
         c.chg.style.color=r.chg>=0?'var(--green)':'var(--red)';
       } else { c.chg.textContent='—'; c.chg.style.color='var(--muted)'; }
-      c.ath.textContent='ATH $'+fmtN(r.ath);
+      c.ath.textContent='$'+fmtN(r.ath);
       c.dd.textContent=(dd>-0.00005?'AT HIGH':(dd*100).toFixed(2)+'%');
       const tr=c.dd.closest('tr');
       if(dd>-0.00005){ c.dd.style.color='var(--green)'; c.dd.style.background=''; tr.style.background=''; }
@@ -1775,7 +1777,9 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden) liveTick
             r.chg=d.changePct??null;
             // ATH = 52W high (best proxy available from Yahoo without paid subscription)
             const hi=d.fiftyTwoWeekHigh??null;
-            if(hi!=null) r.ath=Math.max(r.ath??0, hi, r.px);
+            // Yahoo's rolling 52-week high, as-is. It used to be ratcheted up from a value saved in this browser, so it could
+            // never fall when an old high left the 52-week window and drifted away from Yahoo.
+            if(hi!=null) r.ath=Math.max(hi, r.px);
             else if(r.ath==null) r.ath=r.px;
             ok++;
           }
